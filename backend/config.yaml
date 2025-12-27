@@ -1,0 +1,39 @@
+app:
+  name: "Face Recognition Attendance System"
+  version: "1.0.0"
+  host: "0.0.0.0"
+  port: 8000
+  debug: true
+
+face_recognition:
+  detector: "SCRFD"
+  embedding_model: "ArcFace"
+  embedding_dim: 512
+  det_size: [1280, 1280]
+  min_detection_score: 0.35
+  recognition_threshold: 0.35
+  device: "cpu"
+
+camera:
+  rtsp_url: ""
+  usb_device_id: 0
+  fps_limit: 2
+  frame_skip: 1
+
+enrollment:
+  required_images: 15
+  poses:
+    - "center"
+    - "left"
+    - "right"
+    - "up"
+    - "down"
+  min_face_quality: 0.7
+
+attendance:
+  data_dir: "data/attendance"
+  export_dir: "data/attendance/exports"
+
+embeddings:
+  storage_dir: "data/embeddings"
+  gallery_file: "gallery.npz"

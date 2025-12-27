@@ -1,0 +1,392 @@
+Perfect.
+Below is a **SINGLE, COMPLETE, END-TO-END PROMPT** written **specifically for an AI coding agent like WINDSURF**.
+
+👉 You can **COPY–PASTE this EXACTLY** into Windsurf.
+👉 It covers **backend + frontend + AI + Raspberry Pi + Mac + InsightFace (state-of-the-art)**.
+👉 It enforces **iterative development**, **clean architecture**, and **no shortcuts**.
+
+---
+
+# ✅ FINAL COMPLETE PROMPT FOR WINDSURF (COPY FROM HERE)
+
+---
+
+## ROLE & EXPECTATION
+
+You are an **expert full-stack AI engineer** with deep experience in:
+
+* Computer Vision
+* Face Recognition (state-of-the-art)
+* InsightFace / ONNX
+* Edge AI (Raspberry Pi)
+* FastAPI backend
+* React frontend
+* End-to-end system design
+
+You will **design, explain, and implement** a **production-ready Face Recognition Attendance Software** for a **school**.
+
+You MUST work **ITERATIVELY** and **STOP after each phase** for approval.
+
+---
+
+## PROJECT GOAL
+
+Build a **Face Recognition–based Attendance System** that:
+
+1. Uses **CCTV / USB camera**
+2. Detects and identifies **students’ faces**
+3. Marks attendance **automatically**
+4. Saves attendance with **date + time** in **Excel**
+5. Works on:
+
+   * macOS (development)
+   * Raspberry Pi (16GB RAM, deployment)
+6. Uses **state-of-the-art face recognition**
+7. Has a **React frontend**
+8. Frontend and backend communicate via **JSON (REST APIs)**
+
+---
+
+## CORE TECHNOLOGY CONSTRAINTS (MANDATORY)
+
+### Face Recognition
+
+* Use **InsightFace (latest stable)**
+* Use **ONNX models**
+* Use **ArcFace embeddings**
+* CPU-only (no CUDA, no GPU dependency)
+* Optimized for Raspberry Pi
+
+### Backend
+
+* Python 3.11+
+* FastAPI
+* Pydantic schemas
+* OpenCV for camera
+* Pandas + OpenPyXL for Excel
+
+### Frontend
+
+* React (Vite preferred)
+* Axios or Fetch
+* JSON serialization/deserialization
+* Responsive, simple UI
+
+---
+
+## HIGH-LEVEL ARCHITECTURE
+
+```
+Camera (CCTV / USB)
+        ↓
+Face Detection (InsightFace)
+        ↓
+Embedding Extraction (ArcFace)
+        ↓
+Face Matching (Cosine Similarity)
+        ↓
+Attendance Logic
+        ↓
+Excel File (.xlsx)
+        ↓
+FastAPI Backend (JSON APIs)
+        ↓
+React Frontend
+```
+
+---
+
+## REQUIRED FEATURES (STRICT)
+
+### 1️⃣ LIVE FACE ATTENDANCE
+
+* Continuous camera feed
+* Detect multiple faces
+* Identify students
+* Mark attendance **only once per day**
+* Save:
+
+  * Student ID
+  * Name
+  * Class
+  * Date
+  * Time
+  * Status (Present)
+
+---
+
+### 2️⃣ STUDENT ENROLLMENT (VERY IMPORTANT)
+
+When admin clicks **“Add New Student”**:
+
+* System activates camera
+* Automatically captures **15 images**
+* Provides **real-time guidance**, e.g.:
+
+  * “Look straight”
+  * “Turn head left”
+  * “Turn head right”
+  * “Move slightly closer”
+* Ensures:
+
+  * Face is centered
+  * Good lighting
+  * Clear visibility
+* Extracts embeddings
+* Stores embeddings in database
+* Stores metadata:
+
+  * Student ID
+  * Name
+  * Class
+
+---
+
+### 3️⃣ FRONTEND (REACT UI)
+
+#### Pages (MANDATORY)
+
+1. **Dashboard**
+
+   * Camera status
+   * System running status
+   * Today’s attendance count
+
+2. **Attendance Page**
+
+   * Table of students
+   * Date filter
+   * Export to Excel button
+
+3. **Add Student Page**
+
+   * Form: ID, Name, Class
+   * Live camera preview
+   * Enrollment progress (1–15)
+   * Instruction text
+
+4. **Students List**
+
+   * All enrolled students
+   * Search & filter
+
+---
+
+### 4️⃣ BACKEND (FASTAPI)
+
+#### API RULES
+
+* JSON only
+* No HTML responses
+* Use proper HTTP status codes
+* Use Pydantic models
+* Clean separation of concerns
+
+---
+
+## REQUIRED API ENDPOINTS
+
+### 🔹 System Status
+
+`GET /api/system/status`
+
+```json
+{
+  "platform": "raspberry_pi",
+  "camera": "connected",
+  "fps": 1,
+  "uptime": "2h 10m"
+}
+```
+
+---
+
+### 🔹 Start Enrollment
+
+`POST /api/enrollment/start`
+
+```json
+{
+  "student_id": "023",
+  "name": "Ananya Singh",
+  "class": "8A"
+}
+```
+
+Response:
+
+```json
+{
+  "status": "started",
+  "images_required": 15
+}
+```
+
+---
+
+### 🔹 Enrollment Progress
+
+`GET /api/enrollment/status`
+
+```json
+{
+  "current_image": 9,
+  "instruction": "Turn head right",
+  "completed": false
+}
+```
+
+---
+
+### 🔹 Today’s Attendance
+
+`GET /api/attendance/today`
+
+```json
+{
+  "date": "2025-09-01",
+  "students": [
+    {
+      "student_id": "023",
+      "name": "Ananya Singh",
+      "class": "8A",
+      "time": "09:05:12",
+      "status": "Present"
+    }
+  ]
+}
+```
+
+---
+
+### 🔹 Student Database
+
+`GET /api/students`
+
+```json
+{
+  "count": 120,
+  "students": [
+    {
+      "student_id": "023",
+      "name": "Ananya Singh",
+      "class": "8A"
+    }
+  ]
+}
+```
+
+---
+
+## DATA STORAGE DESIGN
+
+* Embeddings:
+
+  * Stored as `.npy` or serialized vectors
+* Metadata:
+
+  * JSON / lightweight database
+* Attendance:
+
+  * Excel file per day OR master Excel
+
+---
+
+## PROJECT STRUCTURE (MANDATORY)
+
+```
+face_attendance/
+│
+├── backend/
+│   ├── app.py
+│   ├── api/
+│   ├── core/
+│   │   ├── camera.py
+│   │   ├── face_detector.py
+│   │   ├── recognizer.py
+│   │   ├── enrollment.py
+│   │   ├── attendance.py
+│   ├── models/
+│   └── utils/
+│
+├── frontend/
+│   ├── src/
+│   │   ├── pages/
+│   │   ├── components/
+│   │   ├── services/
+│   │   └── App.jsx
+│
+└── README.md
+```
+
+---
+
+## PERFORMANCE REQUIREMENTS
+
+* Raspberry Pi friendly
+* ≤ 1 FPS processing
+* No memory leaks
+* No blocking UI
+* Background processing for recognition
+
+---
+
+## ITERATIVE DEVELOPMENT PLAN (MANDATORY)
+
+### Phase 1
+
+System architecture explanation
+🛑 STOP
+
+### Phase 2
+
+Face recognition core (InsightFace)
+🛑 STOP
+
+### Phase 3
+
+Enrollment pipeline (15 images + guidance)
+🛑 STOP
+
+### Phase 4
+
+Attendance logic + Excel export
+🛑 STOP
+
+### Phase 5
+
+FastAPI backend + JSON APIs
+🛑 STOP
+
+### Phase 6
+
+React frontend + API integration
+🛑 STOP
+
+### Phase 7
+
+Raspberry Pi optimization & deployment
+🛑 STOP
+
+---
+
+## HARD RULES
+
+❌ Do NOT skip phases
+❌ Do NOT dump all code at once
+❌ Do NOT use deprecated libraries
+❌ Do NOT assume GPU
+✅ Explain decisions clearly
+✅ Write clean, readable, production-ready code
+
+---
+
+## FINAL INSTRUCTION
+
+Begin with **Phase 1: System Architecture Explanation**
+Explain clearly, then WAIT.
+
+---
+
+# ✅ END OF PROMPT
+
