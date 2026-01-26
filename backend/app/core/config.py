@@ -25,6 +25,7 @@ class FaceRecognitionConfig(BaseSettings):
 
 
 class CameraConfig(BaseSettings):
+    source_type: str = "usb"  # "usb" or "rtsp"
     rtsp_url: str = ""
     usb_device_id: int = 0
     fps_limit: int = 2
@@ -47,6 +48,14 @@ class EmbeddingsConfig(BaseSettings):
     gallery_file: str = "gallery.npz"
 
 
+class SecurityConfig(BaseSettings):
+    secret_key: str = "your-secret-key-change-this-in-production"
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60 * 24  # 24 hours
+    admin_username: str = "admin"
+    admin_password: str = "admin123"  # Default password
+
+
 class Settings(BaseSettings):
     app: AppConfig = Field(default_factory=AppConfig)
     face_recognition: FaceRecognitionConfig = Field(default_factory=FaceRecognitionConfig)
@@ -54,6 +63,7 @@ class Settings(BaseSettings):
     enrollment: EnrollmentConfig = Field(default_factory=EnrollmentConfig)
     attendance: AttendanceConfig = Field(default_factory=AttendanceConfig)
     embeddings: EmbeddingsConfig = Field(default_factory=EmbeddingsConfig)
+    security: SecurityConfig = Field(default_factory=SecurityConfig)
 
     @classmethod
     def from_yaml(cls, path: Path) -> "Settings":
@@ -67,6 +77,7 @@ class Settings(BaseSettings):
             enrollment=EnrollmentConfig(**data.get("enrollment", {})),
             attendance=AttendanceConfig(**data.get("attendance", {})),
             embeddings=EmbeddingsConfig(**data.get("embeddings", {})),
+            security=SecurityConfig(**data.get("security", {})),
         )
 
 

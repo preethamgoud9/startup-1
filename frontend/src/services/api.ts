@@ -9,6 +9,26 @@ const api = axios.create({
   },
 });
 
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.reload();
+    }
+    return Promise.reject(error);
+  }
+);
+
 export interface HealthResponse {
   status: string;
   timestamp: string;
@@ -61,6 +81,16 @@ export interface AttendanceResponse {
   records: AttendanceRecord[];
   total: number;
   date: string;
+}
+
+export interface User {
+  username: string;
+  is_admin: boolean;
+}
+
+export interface Token {
+  access_token: string;
+  token_type: string;
 }
 
 export const healthCheck = async (): Promise<HealthResponse> => {
@@ -138,6 +168,24 @@ export const exportAttendance = async (date?: string, classFilter?: string): Pro
     { date, class_filter: classFilter },
     { responseType: 'blob' }
   );
+  return response.data;
+};
+
+export const login = async (username: string, password: string): Promise<Token> => {
+  const formData = new FormData();
+  formData.append('username', username);
+  formData.append('password', password);
+
+  const response = await api.post<Token>('/auth/login', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const getCurrentUser = async (): Promise<User> => {
+  const response = await api.get<User>('/auth/me');
   return response.data;
 };
 

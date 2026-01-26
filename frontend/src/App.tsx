@@ -3,18 +3,43 @@ import { Navbar } from './components/Navbar'
 import { LiveRecognition } from './pages/LiveRecognition'
 import { EnrollStudent } from './pages/EnrollStudent'
 import { AttendanceDashboard } from './pages/AttendanceDashboard'
+import { Login } from './pages/Login'
+import { Settings } from './pages/Settings'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import './App.css'
 
-function App() {
-  const [currentPage, setCurrentPage] = useState<'live' | 'enroll' | 'attendance'>('live')
+function AppContent() {
+  const [currentPage, setCurrentPage] = useState<'live' | 'enroll' | 'attendance' | 'settings'>('live')
+  const { isAuthenticated, isLoading } = useAuth()
+
+  if (isLoading) {
+    return (
+      <div className="loader-container" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p>Initializing Secure Session...</p>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Login />
+  }
 
   return (
-    <div style={{ minHeight: '100vh', width: '100vw', backgroundColor: '#f1f5f9', margin: 0, padding: 0, overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', width: '100vw', margin: 0, padding: 0, overflowX: 'hidden' }}>
       <Navbar currentPage={currentPage} onNavigate={setCurrentPage} />
       {currentPage === 'live' && <LiveRecognition />}
       {currentPage === 'enroll' && <EnrollStudent />}
       {currentPage === 'attendance' && <AttendanceDashboard />}
+      {currentPage === 'settings' && <Settings />}
     </div>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 

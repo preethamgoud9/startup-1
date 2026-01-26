@@ -2,10 +2,10 @@ import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health, enrollment, recognition, attendance
+from app.api import health, enrollment, recognition, attendance, auth, settings as settings_api
 from app.core.config import settings
 from app.services.face_engine import FaceEngine
 from app.utils.logger import setup_logging
@@ -41,10 +41,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Public routes
 app.include_router(health.router, prefix="/api", tags=["health"])
-app.include_router(enrollment.router, prefix="/api/enroll", tags=["enrollment"])
-app.include_router(recognition.router, prefix="/api/recognition", tags=["recognition"])
-app.include_router(attendance.router, prefix="/api/attendance", tags=["attendance"])
+app.include_router(auth.router, prefix="/api", tags=["authentication"])
+
+# Protected routes (requires Bearer token)
+from app.api.auth import get_current_user
+app.include_router(
+    enrollment.router, 
+    prefix="/api/enroll", 
+    tags=["enrollment"],
+    dependencies=[Depends(get_current_user)]
+)
+app.include_router(
+    recognition.router, 
+    prefix="/api/recognition", 
+    tags=["recognition"],
+    dependencies=[Depends(get_current_user)]
+)
+app.include_router(
+    attendance.router, 
+    prefix="/api/attendance", 
+    tags=["attendance"],
+    dependencies=[Depends(get_current_user)]
+)
+app.include_router(
+    settings_api.router, 
+    prefix="/api", 
+    tags=["settings"],
+    dependencies=[Depends(get_current_user)]
+)
 
 
 if __name__ == "__main__":
