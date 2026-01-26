@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Download, RefreshCw, Calendar } from 'lucide-react';
+import { Download, RefreshCw, Calendar, Users, FileText, CheckCircle } from 'lucide-react';
 import { getTodayAttendance, getAttendanceByDate, exportAttendance } from '../services/api';
 import type { AttendanceRecord } from '../services/api';
+import './AttendanceDashboard.css';
 
 export const AttendanceDashboard: React.FC = () => {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -18,7 +19,7 @@ export const AttendanceDashboard: React.FC = () => {
         : await getTodayAttendance();
       setRecords(response.records);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load attendance');
+      setError(err.response?.data?.detail || 'Identity ledger failed to load.');
     } finally {
       setIsLoading(false);
     }
@@ -30,13 +31,13 @@ export const AttendanceDashboard: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `attendance_${selectedDate}.xlsx`;
+      a.download = `attendance_report_${selectedDate}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to export attendance');
+      setError(err.response?.data?.detail || 'Report synthesis failed.');
     }
   };
 
@@ -45,72 +46,92 @@ export const AttendanceDashboard: React.FC = () => {
   }, [selectedDate]);
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h1 style={styles.title}>Attendance Dashboard</h1>
-        <div style={styles.controls}>
-          <div style={styles.dateControl}>
-            <Calendar size={20} />
+    <div className="dashboard-container animate-fade-in">
+      <div className="dashboard-header">
+        <h1 className="live-title">Attendance Analytics</h1>
+        <div className="dashboard-controls">
+          <div className="date-picker-glass">
+            <Calendar size={18} color="var(--primary)" />
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              style={styles.dateInput}
+              className="date-input-hidden"
             />
           </div>
-          <button style={styles.refreshButton} onClick={() => loadAttendance(selectedDate)}>
-            <RefreshCw size={20} />
-            <span>Refresh</span>
+          <button className="btn-primary" onClick={() => loadAttendance(selectedDate)} style={{ padding: '10px 16px' }}>
+            <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
+            <span>Sync</span>
           </button>
-          <button style={styles.exportButton} onClick={handleExport} disabled={records.length === 0}>
-            <Download size={20} />
-            <span>Export Excel</span>
+          <button
+            className="btn-primary"
+            onClick={handleExport}
+            disabled={records.length === 0}
+            style={{ padding: '10px 16px', background: 'linear-gradient(135deg, var(--accent), var(--primary))' }}
+          >
+            <Download size={18} />
+            <span>Export</span>
           </button>
         </div>
       </div>
 
       {error && (
-        <div style={styles.error}>
+        <div className="error-toast">
+          <AlertCircle size={20} />
           <span>{error}</span>
         </div>
       )}
 
-      <div style={styles.statsContainer}>
-        <div style={styles.statCard}>
-          <div style={styles.statValue}>{records.length}</div>
-          <div style={styles.statLabel}>Students Present</div>
+      <div className="stats-grid">
+        <div className="stat-glass-card glass">
+          <div className="stat-label">Total Authenticated</div>
+          <div className="stat-value">{records.length}</div>
+          <div style={{ position: 'absolute', bottom: 20, right: 20, opacity: 0.2 }}>
+            <Users size={48} color="var(--primary)" />
+          </div>
         </div>
-        <div style={styles.statCard}>
-          <div style={styles.statValue}>{selectedDate}</div>
-          <div style={styles.statLabel}>Date</div>
+        <div className="stat-glass-card glass">
+          <div className="stat-label">Reference Period</div>
+          <div className="stat-value" style={{ fontSize: '1.5rem', marginTop: 10 }}>{new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+          <div style={{ position: 'absolute', bottom: 20, right: 20, opacity: 0.2 }}>
+            <FileText size={48} color="var(--primary)" />
+          </div>
         </div>
       </div>
 
-      <div style={styles.tableContainer}>
+      <div className="table-glass-wrapper glass">
         {isLoading ? (
-          <div style={styles.loading}>Loading...</div>
+          <div className="loader-container">
+            <RefreshCw size={48} className="animate-spin" opacity={0.2} />
+            <p>Accessing identity ledger...</p>
+          </div>
         ) : records.length === 0 ? (
-          <div style={styles.empty}>No attendance records for this date</div>
+          <div className="loader-container">
+            <CheckCircle size={48} opacity={0.2} />
+            <p>No identities localized for this period.</p>
+          </div>
         ) : (
-          <table style={styles.table}>
+          <table className="attendance-table">
             <thead>
-              <tr style={styles.tableHeaderRow}>
-                <th style={styles.tableHeader}>Student ID</th>
-                <th style={styles.tableHeader}>Name</th>
-                <th style={styles.tableHeader}>Class</th>
-                <th style={styles.tableHeader}>Time</th>
-                <th style={styles.tableHeader}>Confidence</th>
+              <tr>
+                <th>Identity ID</th>
+                <th>Full Name</th>
+                <th>Classification</th>
+                <th>Localized Time</th>
+                <th>Reliability</th>
               </tr>
             </thead>
             <tbody>
               {records.map((record, idx) => (
-                <tr key={idx} style={styles.tableRow}>
-                  <td style={styles.tableCell}>{record.student_id}</td>
-                  <td style={styles.tableCell}>{record.name}</td>
-                  <td style={styles.tableCell}>{record.class}</td>
-                  <td style={styles.tableCell}>{record.time}</td>
-                  <td style={styles.tableCell}>
-                    {record.confidence ? `${(record.confidence * 100).toFixed(1)}%` : 'N/A'}
+                <tr key={idx}>
+                  <td style={{ fontWeight: 600 }}>{record.student_id}</td>
+                  <td>{record.name}</td>
+                  <td>{record.class}</td>
+                  <td style={{ color: 'var(--text-muted)' }}>{record.time}</td>
+                  <td>
+                    <span className="confidence-indicator">
+                      {record.confidence ? `${(record.confidence * 100).toFixed(1)}%` : 'N/A'}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -122,157 +143,10 @@ export const AttendanceDashboard: React.FC = () => {
   );
 };
 
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    padding: '2rem 2.5rem',
-    width: '100%',
-    minHeight: 'calc(100vh - 80px)',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '2.5rem',
-    flexWrap: 'wrap',
-    gap: '1.5rem',
-  },
-  title: {
-    fontSize: '2.25rem',
-    fontWeight: '700',
-    color: '#0f172a',
-    letterSpacing: '-0.025em',
-  },
-  controls: {
-    display: 'flex',
-    gap: '1rem',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  dateControl: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.625rem',
-    padding: '0.75rem 1.25rem',
-    backgroundColor: 'white',
-    border: '2px solid #e2e8f0',
-    borderRadius: '0.75rem',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-  },
-  dateInput: {
-    border: 'none',
-    outline: 'none',
-    fontSize: '0.9375rem',
-    fontWeight: '500',
-    color: '#0f172a',
-  },
-  refreshButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.625rem',
-    padding: '0.75rem 1.5rem',
-    backgroundColor: '#3b82f6',
-    color: 'white',
-    border: 'none',
-    borderRadius: '0.75rem',
-    cursor: 'pointer',
-    fontSize: '0.9375rem',
-    fontWeight: '600',
-    boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.3)',
-    transition: 'all 0.2s',
-  },
-  exportButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.625rem',
-    padding: '0.75rem 1.5rem',
-    backgroundColor: '#10b981',
-    color: 'white',
-    border: 'none',
-    borderRadius: '0.75rem',
-    cursor: 'pointer',
-    fontSize: '0.9375rem',
-    fontWeight: '600',
-    boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
-    transition: 'all 0.2s',
-  },
-  error: {
-    padding: '1rem 1.25rem',
-    backgroundColor: '#fee2e2',
-    color: '#991b1b',
-    borderRadius: '0.75rem',
-    marginBottom: '1.5rem',
-    border: '1px solid #fecaca',
-    fontWeight: '500',
-  },
-  statsContainer: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '1.5rem',
-    marginBottom: '2.5rem',
-  },
-  statCard: {
-    backgroundColor: 'white',
-    padding: '2rem',
-    borderRadius: '1rem',
-    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-    textAlign: 'center',
-    border: '1px solid #e2e8f0',
-    transition: 'all 0.2s',
-  },
-  statValue: {
-    fontSize: '2.5rem',
-    fontWeight: '700',
-    color: '#0f172a',
-    marginBottom: '0.75rem',
-    letterSpacing: '-0.025em',
-  },
-  statLabel: {
-    fontSize: '0.9375rem',
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  tableContainer: {
-    backgroundColor: 'white',
-    borderRadius: '1rem',
-    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-    overflow: 'hidden',
-    border: '1px solid #e2e8f0',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-  },
-  tableHeaderRow: {
-    background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-  },
-  tableHeader: {
-    padding: '1.25rem 1.5rem',
-    textAlign: 'left',
-    fontWeight: '700',
-    color: '#0f172a',
-    borderBottom: '2px solid #e2e8f0',
-    fontSize: '0.9375rem',
-  },
-  tableRow: {
-    borderBottom: '1px solid #f1f5f9',
-    transition: 'background-color 0.15s',
-  },
-  tableCell: {
-    padding: '1.25rem 1.5rem',
-    color: '#475569',
-    fontSize: '0.9375rem',
-  },
-  loading: {
-    padding: '4rem',
-    textAlign: 'center',
-    color: '#64748b',
-    fontSize: '1.125rem',
-    fontWeight: '500',
-  },
-  empty: {
-    padding: '4rem',
-    textAlign: 'center',
-    color: '#94a3b8',
-    fontSize: '1.125rem',
-  },
-};
+const AlertCircle: React.FC<{ size: number }> = ({ size }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+);

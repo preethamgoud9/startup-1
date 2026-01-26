@@ -1,4 +1,4 @@
-#!/Users/daivik2/Desktop/face_recognition/backend/venv/bin/python3.11
+#!/Users/preetham/Desktop/face-recog/backend/venv/bin/python3.11
 import sys
 from dotenv.__main__ import cli
 if __name__ == '__main__':

@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Play, Square, AlertCircle } from 'lucide-react';
+import { Play, Square, AlertCircle, Camera as CameraIcon, Scan, Clock } from 'lucide-react';
 import { startCamera, stopCamera, getLiveRecognition, markAttendance } from '../services/api';
 import type { RecognitionFrameResponse } from '../services/api';
+import './LiveRecognition.css';
 
 export const LiveRecognition: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
@@ -71,249 +72,89 @@ export const LiveRecognition: React.FC = () => {
   }, []);
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h1 style={styles.title}>Live Face Recognition</h1>
-        <div style={styles.controls}>
+    <div className="live-container animate-fade-in">
+      <div className="live-header">
+        <h1 className="live-title">Live Recognition</h1>
+        <div className="live-controls">
           {!isRunning ? (
-            <button style={styles.startButton} onClick={handleStart}>
-              <Play size={20} />
-              <span>Start Camera</span>
+            <button className="btn-primary" onClick={handleStart}>
+              <Play size={20} fill="currentColor" />
+              <span>Start Intelligence</span>
             </button>
           ) : (
-            <button style={styles.stopButton} onClick={handleStop}>
-              <Square size={20} />
-              <span>Stop Camera</span>
+            <button className="btn-primary" onClick={handleStop} style={{ background: 'linear-gradient(135deg, #ef4444, #f43f5e)' }}>
+              <Square size={20} fill="currentColor" />
+              <span>Terminate Feed</span>
             </button>
           )}
         </div>
       </div>
 
       {error && (
-        <div style={styles.error}>
+        <div className="error-toast">
           <AlertCircle size={20} />
           <span>{error}</span>
         </div>
       )}
 
-      <div style={styles.content}>
-        <div style={styles.videoContainer}>
+      <div className="live-content">
+        <div className="video-wrapper">
           {frameData?.frame ? (
-            <img src={frameData.frame} alt="Live feed" style={styles.video} />
+            <img src={frameData.frame} alt="Live analytical feed" className="video-feed" />
           ) : (
-            <div style={styles.placeholder}>
-              <Camera size={64} style={{ opacity: 0.3 }} />
-              <p>Camera feed will appear here</p>
+            <div className="video-placeholder">
+              <CameraIcon size={64} />
+              <p>Initialize vision engine to begin...</p>
+            </div>
+          )}
+          {isRunning && (
+            <div style={{ position: 'absolute', top: 20, left: 20, display: 'flex', alignItems: 'center', gap: 8, color: '#10b981' }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }}></div>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px' }}>Feed Active</span>
             </div>
           )}
         </div>
 
-        <div style={styles.sidebar}>
-          <h2 style={styles.sidebarTitle}>Detected Faces</h2>
-          <div style={styles.resultsList}>
+        <div className="sidebar-glass glass">
+          <h2 className="sidebar-title">
+            <Scan size={20} color="var(--primary)" />
+            Real-time Detections
+          </h2>
+          <div className="results-list">
             {frameData?.results && frameData.results.length > 0 ? (
               frameData.results.map((result, idx) => (
                 <div
                   key={idx}
-                  style={{
-                    ...styles.resultCard,
-                    borderLeft: result.is_known ? '4px solid #10b981' : '4px solid #ef4444',
-                  }}
+                  className={`result-card ${result.is_known ? 'known' : 'unknown'}`}
                 >
-                  <div style={styles.resultHeader}>
-                    <span style={styles.resultName}>
-                      {result.name || result.student_id || 'Unknown'}
+                  <div className="result-info">
+                    <span className="student-name">
+                      {result.name || result.student_id || 'Subject Unknown'}
                     </span>
-                    <span style={styles.resultConfidence}>
-                      {(result.confidence * 100).toFixed(1)}%
+                    <span className="confidence-badge">
+                      {(result.confidence * 100).toFixed(1)}% match
                     </span>
                   </div>
-                  {result.class && <div style={styles.resultClass}>Class: {result.class}</div>}
-                  <div style={styles.resultStatus}>
-                    {result.is_known ? (
-                      <span style={{ color: '#10b981' }}>✓ Recognized</span>
-                    ) : (
-                      <span style={{ color: '#ef4444' }}>✗ Unknown</span>
-                    )}
+                  <div className="student-meta">
+                    {result.class && <span>Class: {result.class}</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Clock size={12} />
+                      <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                  </div>
+                  <div className={`status-indicator ${result.is_known ? 'status-recognized' : 'status-unknown'}`}>
+                    {result.is_known ? 'Authenticated' : 'Unidentified'}
                   </div>
                 </div>
               ))
             ) : (
-              <p style={styles.noResults}>No faces detected</p>
+              <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.5 }}>
+                <p>Waiting for identity detection...</p>
+              </div>
             )}
           </div>
         </div>
       </div>
     </div>
   );
-};
-
-const Camera: React.FC<{ size: number; style?: React.CSSProperties }> = ({ size, style }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" style={style}>
-    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-    <circle cx="12" cy="13" r="4" />
-  </svg>
-);
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    padding: '2rem 2.5rem',
-    width: '100%',
-    minHeight: 'calc(100vh - 80px)',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '2.5rem',
-  },
-  title: {
-    fontSize: '2.25rem',
-    fontWeight: '700',
-    color: '#0f172a',
-    letterSpacing: '-0.025em',
-  },
-  controls: {
-    display: 'flex',
-    gap: '1rem',
-  },
-  startButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.625rem',
-    padding: '0.875rem 2rem',
-    backgroundColor: '#10b981',
-    color: 'white',
-    border: 'none',
-    borderRadius: '0.75rem',
-    cursor: 'pointer',
-    fontSize: '1rem',
-    fontWeight: '600',
-    boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
-    transition: 'all 0.2s',
-  },
-  stopButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.625rem',
-    padding: '0.875rem 2rem',
-    backgroundColor: '#ef4444',
-    color: 'white',
-    border: 'none',
-    borderRadius: '0.75rem',
-    cursor: 'pointer',
-    fontSize: '1rem',
-    fontWeight: '600',
-    boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.3)',
-    transition: 'all 0.2s',
-  },
-  error: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    padding: '1rem 1.25rem',
-    backgroundColor: '#fee2e2',
-    color: '#991b1b',
-    borderRadius: '0.75rem',
-    marginBottom: '1.5rem',
-    border: '1px solid #fecaca',
-  },
-  content: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 400px',
-    gap: '2rem',
-    alignItems: 'start',
-    width: '100%',
-  },
-  videoContainer: {
-    backgroundColor: '#000',
-    borderRadius: '1rem',
-    overflow: 'hidden',
-    aspectRatio: '16/9',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-    border: '2px solid #1e293b',
-  },
-  video: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'contain',
-  },
-  placeholder: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: '#64748b',
-    gap: '1.5rem',
-  },
-  sidebar: {
-    backgroundColor: 'white',
-    borderRadius: '1rem',
-    padding: '2rem',
-    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-    border: '1px solid #e2e8f0',
-    minHeight: '400px',
-  },
-  sidebarTitle: {
-    fontSize: '1.5rem',
-    fontWeight: '700',
-    marginBottom: '1.5rem',
-    color: '#0f172a',
-    borderBottom: '2px solid #e2e8f0',
-    paddingBottom: '0.75rem',
-  },
-  resultsList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1.25rem',
-  },
-  resultCard: {
-    backgroundColor: '#f8fafc',
-    padding: '1.25rem',
-    borderRadius: '0.75rem',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-    transition: 'all 0.2s',
-    border: '1px solid #e2e8f0',
-  },
-  resultHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '0.75rem',
-  },
-  resultName: {
-    fontWeight: '700',
-    fontSize: '1.125rem',
-    color: '#0f172a',
-  },
-  resultConfidence: {
-    fontSize: '0.875rem',
-    fontWeight: '600',
-    color: '#64748b',
-    backgroundColor: '#e2e8f0',
-    padding: '0.25rem 0.75rem',
-    borderRadius: '0.5rem',
-  },
-  resultClass: {
-    fontSize: '0.875rem',
-    color: '#64748b',
-    marginBottom: '0.75rem',
-    fontWeight: '500',
-  },
-  resultStatus: {
-    fontSize: '0.875rem',
-    fontWeight: '600',
-    padding: '0.5rem 0.75rem',
-    borderRadius: '0.5rem',
-    display: 'inline-block',
-  },
-  noResults: {
-    textAlign: 'center',
-    color: '#94a3b8',
-    padding: '3rem 1rem',
-    fontSize: '1rem',
-  },
 };

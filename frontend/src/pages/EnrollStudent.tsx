@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Camera, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { Camera, CheckCircle, AlertCircle, Loader, User, BookOpen, Fingerprint, X } from 'lucide-react';
 import { useWebcam } from '../hooks/useWebcam';
 import { startEnrollment, captureImage } from '../services/api';
 import type { EnrollmentSessionResponse } from '../services/api';
+import './EnrollStudent.css';
 
 export const EnrollStudent: React.FC = () => {
   const { videoRef, isActive, error: webcamError, startWebcam, stopWebcam, captureFrame } = useWebcam();
@@ -16,7 +17,7 @@ export const EnrollStudent: React.FC = () => {
 
   const handleStartEnrollment = async () => {
     if (!studentId || !name || !className) {
-      setError('Please fill in all fields');
+      setError('Required fields are missing. Please provide complete student identity.');
       return;
     }
 
@@ -27,7 +28,7 @@ export const EnrollStudent: React.FC = () => {
       setSession(sessionData);
       await startWebcam();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to start enrollment');
+      setError(err.response?.data?.detail || 'Identity enrollment failed to initialize.');
     }
   };
 
@@ -36,7 +37,7 @@ export const EnrollStudent: React.FC = () => {
 
     const frame = captureFrame();
     if (!frame) {
-      setError('Failed to capture frame');
+      setError('Image acquisition failed.');
       return;
     }
 
@@ -50,7 +51,7 @@ export const EnrollStudent: React.FC = () => {
       });
 
       if (response.completed) {
-        setSuccess('Enrollment completed successfully!');
+        setSuccess('Identity localized. Enrollment success.');
         stopWebcam();
         setSession(null);
         setStudentId('');
@@ -58,7 +59,7 @@ export const EnrollStudent: React.FC = () => {
         setClassName('');
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to capture image');
+      setError(err.response?.data?.detail || 'Biometric capture failed.');
     } finally {
       setIsCapturing(false);
     }
@@ -76,70 +77,76 @@ export const EnrollStudent: React.FC = () => {
     : 0;
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>Enroll New Student</h1>
+    <div className="enroll-container animate-fade-in">
+      <h1 className="enroll-title">Student Enrollment</h1>
 
       {!session ? (
-        <div style={styles.formContainer}>
-          <div style={styles.form}>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Student ID</label>
+        <div className="enroll-wrapper">
+          <div className="form-glass glass">
+            <div className="form-group">
+              <label className="form-label">
+                <Fingerprint size={16} /> Student ID
+              </label>
               <input
                 type="text"
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
-                style={styles.input}
-                placeholder="Enter student ID"
+                className="form-input"
+                placeholder="ID-8829"
               />
             </div>
 
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Full Name</label>
+            <div className="form-group">
+              <label className="form-label">
+                <User size={16} /> Full Name
+              </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                style={styles.input}
-                placeholder="Enter student name"
+                className="form-input"
+                placeholder="Johnathan Doe"
               />
             </div>
 
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Class</label>
+            <div className="form-group">
+              <label className="form-label">
+                <BookOpen size={16} /> Department / Class
+              </label>
               <input
                 type="text"
                 value={className}
                 onChange={(e) => setClassName(e.target.value)}
-                style={styles.input}
-                placeholder="Enter class (e.g., 10A)"
+                className="form-input"
+                placeholder="CS-101"
               />
             </div>
 
             {error && (
-              <div style={styles.error}>
+              <div className="error-toast" style={{ margin: 0 }}>
                 <AlertCircle size={20} />
                 <span>{error}</span>
               </div>
             )}
 
             {success && (
-              <div style={styles.success}>
+              <div className="success-toast" style={{ margin: 0 }}>
                 <CheckCircle size={20} />
                 <span>{success}</span>
               </div>
             )}
 
-            <button style={styles.startButton} onClick={handleStartEnrollment}>
-              Start Enrollment
+            <button className="btn-primary" onClick={handleStartEnrollment} style={{ width: '100%', justifyContent: 'center' }}>
+              Initialize Enrollment
             </button>
           </div>
         </div>
       ) : (
-        <div style={styles.captureContainer}>
-          <div style={styles.videoSection}>
-            <div style={styles.videoWrapper}>
+        <div className="capture-layout">
+          <div>
+            <div className="enroll-video-card">
               {webcamError && (
-                <div style={styles.error}>
+                <div className="error-toast" style={{ position: 'absolute', top: 20, left: 20, right: 20, zIndex: 10 }}>
                   <AlertCircle size={20} />
                   <span>{webcamError}</span>
                 </div>
@@ -148,66 +155,100 @@ export const EnrollStudent: React.FC = () => {
                 ref={videoRef}
                 autoPlay
                 playsInline
-                style={styles.video}
+                className="enroll-video"
               />
+              <div style={{ position: 'absolute', top: 20, right: 20 }}>
+                <div style={{ padding: '8px 16px', background: 'rgba(0,0,0,0.5)', borderRadius: '20px', color: 'white', fontSize: '0.8rem', fontWeight: 600, backdropFilter: 'blur(4px)' }}>
+                  Live Identity Acquisition
+                </div>
+              </div>
             </div>
 
-            <div style={styles.poseInstruction}>
+            <div className="pose-card">
               {session.next_pose && (
                 <>
-                  <h3 style={styles.poseTitle}>Next Pose:</h3>
-                  <p style={styles.poseText}>{session.next_pose.toUpperCase()}</p>
+                  <div className="pose-label">Position Request</div>
+                  <div className="pose-name">{session.next_pose.toUpperCase()}</div>
                 </>
               )}
             </div>
           </div>
 
-          <div style={styles.sidebar}>
-            <div style={styles.progressSection}>
-              <h3 style={styles.sidebarTitle}>Progress</h3>
-              <div style={styles.progressBar}>
-                <div style={{ ...styles.progressFill, width: `${progress}%` }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div className="progress-card glass">
+              <div className="progress-header">
+                <span className="sidebar-title" style={{ fontSize: '1.1rem' }}>Acquisition Progress</span>
+                <span className="info-value">{progress}%</span>
               </div>
-              <p style={styles.progressText}>
-                {session.current_count} / {session.required_images} images captured
-              </p>
+              <div className="progress-track">
+                <div className="progress-bar" style={{ width: `${progress}%` }} />
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                {session.current_count} of {session.required_images} biometrics secured
+              </div>
             </div>
 
-            <div style={styles.studentInfo}>
-              <h3 style={styles.sidebarTitle}>Student Information</h3>
-              <p><strong>ID:</strong> {session.student_id}</p>
-              <p><strong>Name:</strong> {name}</p>
-              <p><strong>Class:</strong> {className}</p>
+            <div className="info-card glass">
+              <h3 className="sidebar-title" style={{ fontSize: '1.1rem', marginBottom: 12 }}>Metadata</h3>
+              <div className="info-item">
+                <span className="info-label">Identity ID</span>
+                <span className="info-value">{session.student_id}</span>
+              </div>
+              <div className="info-item">
+                <span className="info-label">Legal Name</span>
+                <span className="info-value">{name}</span>
+              </div>
+              <div className="info-item">
+                <span className="info-label">Assigned Class</span>
+                <span className="info-value">{className}</span>
+              </div>
             </div>
 
             {error && (
-              <div style={styles.error}>
+              <div className="error-toast" style={{ margin: 0 }}>
                 <AlertCircle size={20} />
                 <span>{error}</span>
               </div>
             )}
 
-            <div style={styles.controls}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <button
-                style={styles.captureButton}
+                className="btn-primary"
                 onClick={handleCapture}
                 disabled={isCapturing}
+                style={{ width: '100%', justifyContent: 'center' }}
               >
                 {isCapturing ? (
                   <>
-                    <Loader size={20} style={{ animation: 'spin 1s linear infinite' }} />
-                    <span>Capturing...</span>
+                    <Loader size={20} className="animate-spin" />
+                    <span>Processing...</span>
                   </>
                 ) : (
                   <>
-                    <Camera size={20} />
-                    <span>Capture Image</span>
+                    <Camera size={20} fill="currentColor" />
+                    <span>Secure Biometric</span>
                   </>
                 )}
               </button>
 
-              <button style={styles.cancelButton} onClick={handleCancel}>
-                Cancel
+              <button
+                onClick={handleCancel}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  borderRadius: '12px',
+                  color: '#ef4444',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                <X size={18} /> Abort Session
               </button>
             </div>
           </div>
@@ -215,210 +256,4 @@ export const EnrollStudent: React.FC = () => {
       )}
     </div>
   );
-};
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    padding: '2rem 2.5rem',
-    width: '100%',
-    minHeight: 'calc(100vh - 80px)',
-  },
-  title: {
-    fontSize: '2.25rem',
-    fontWeight: '700',
-    color: '#0f172a',
-    marginBottom: '2.5rem',
-    letterSpacing: '-0.025em',
-  },
-  formContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    padding: '2rem 0',
-  },
-  form: {
-    backgroundColor: 'white',
-    padding: '2.5rem',
-    borderRadius: '1rem',
-    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-    width: '100%',
-    maxWidth: '550px',
-    border: '1px solid #e2e8f0',
-  },
-  formGroup: {
-    marginBottom: '1.75rem',
-  },
-  label: {
-    display: 'block',
-    marginBottom: '0.625rem',
-    fontWeight: '600',
-    color: '#0f172a',
-    fontSize: '0.9375rem',
-  },
-  input: {
-    width: '100%',
-    padding: '0.875rem 1rem',
-    border: '2px solid #e2e8f0',
-    borderRadius: '0.75rem',
-    fontSize: '1rem',
-    boxSizing: 'border-box',
-    transition: 'all 0.2s',
-  },
-  startButton: {
-    width: '100%',
-    padding: '1rem',
-    backgroundColor: '#3b82f6',
-    color: 'white',
-    border: 'none',
-    borderRadius: '0.75rem',
-    fontSize: '1rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.3)',
-    transition: 'all 0.2s',
-  },
-  captureContainer: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 400px',
-    gap: '2rem',
-    alignItems: 'start',
-    width: '100%',
-  },
-  videoSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1.5rem',
-  },
-  videoWrapper: {
-    backgroundColor: '#000',
-    borderRadius: '1rem',
-    overflow: 'hidden',
-    aspectRatio: '4/3',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-    border: '2px solid #1e293b',
-  },
-  video: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  },
-  poseInstruction: {
-    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-    color: 'white',
-    padding: '2rem',
-    borderRadius: '1rem',
-    textAlign: 'center',
-    boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3)',
-  },
-  poseTitle: {
-    fontSize: '1rem',
-    marginBottom: '0.75rem',
-    opacity: 0.9,
-    fontWeight: '500',
-  },
-  poseText: {
-    fontSize: '2.5rem',
-    fontWeight: '700',
-    margin: 0,
-    letterSpacing: '-0.025em',
-  },
-  sidebar: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1.5rem',
-  },
-  progressSection: {
-    backgroundColor: 'white',
-    padding: '2rem',
-    borderRadius: '1rem',
-    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-    border: '1px solid #e2e8f0',
-  },
-  sidebarTitle: {
-    fontSize: '1.25rem',
-    fontWeight: '700',
-    marginBottom: '1.25rem',
-    color: '#0f172a',
-  },
-  progressBar: {
-    width: '100%',
-    height: '1.25rem',
-    backgroundColor: '#e2e8f0',
-    borderRadius: '0.75rem',
-    overflow: 'hidden',
-    marginBottom: '0.75rem',
-  },
-  progressFill: {
-    height: '100%',
-    background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
-    transition: 'width 0.3s ease',
-    boxShadow: 'inset 0 2px 4px rgba(255, 255, 255, 0.3)',
-  },
-  progressText: {
-    fontSize: '0.9375rem',
-    color: '#64748b',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  studentInfo: {
-    backgroundColor: 'white',
-    padding: '2rem',
-    borderRadius: '1rem',
-    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-    border: '1px solid #e2e8f0',
-  },
-  controls: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1rem',
-  },
-  captureButton: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.625rem',
-    padding: '1rem',
-    backgroundColor: '#10b981',
-    color: 'white',
-    border: 'none',
-    borderRadius: '0.75rem',
-    fontSize: '1rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
-    transition: 'all 0.2s',
-  },
-  cancelButton: {
-    padding: '1rem',
-    backgroundColor: '#ef4444',
-    color: 'white',
-    border: 'none',
-    borderRadius: '0.75rem',
-    fontSize: '1rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.3)',
-    transition: 'all 0.2s',
-  },
-  error: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    padding: '1rem 1.25rem',
-    backgroundColor: '#fee2e2',
-    color: '#991b1b',
-    borderRadius: '0.75rem',
-    marginBottom: '1.5rem',
-    border: '1px solid #fecaca',
-  },
-  success: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    padding: '1rem 1.25rem',
-    backgroundColor: '#d1fae5',
-    color: '#065f46',
-    borderRadius: '0.75rem',
-    marginBottom: '1.5rem',
-    border: '1px solid #a7f3d0',
-  },
 };

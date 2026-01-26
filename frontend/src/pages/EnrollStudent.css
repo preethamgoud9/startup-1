@@ -1,0 +1,164 @@
+.enroll-container {
+    padding: 120px 40px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.enroll-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 40px;
+    letter-spacing: -1px;
+}
+
+.enroll-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 0;
+}
+
+.form-glass {
+    width: 100%;
+    max-width: 500px;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.form-input {
+    width: 100%;
+    padding: 14px 18px;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    font-size: 1rem;
+    color: var(--text-main);
+    font-family: inherit;
+    transition: all 0.3s ease;
+}
+
+.form-input:focus {
+    background: white;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    outline: none;
+}
+
+.capture-layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 32px;
+}
+
+.enroll-video-card {
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+    background: #000;
+    aspect-ratio: 4/3;
+    position: relative;
+}
+
+.enroll-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.pose-card {
+    margin-top: 24px;
+    padding: 24px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white;
+    border-radius: 16px;
+    text-align: center;
+}
+
+.pose-label {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.pose-name {
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.progress-card {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.progress-track {
+    width: 100%;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--primary));
+    transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.info-card {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+}
+
+.info-label {
+    color: var(--text-muted);
+}
+
+.info-value {
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.success-toast {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+    padding: 12px 20px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
