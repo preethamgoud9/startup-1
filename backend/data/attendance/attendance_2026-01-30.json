@@ -1,0 +1,47 @@
+{
+  "3": {
+    "student_id": "3",
+    "name": "sriman narayana",
+    "class": "7d",
+    "date": "2026-01-30",
+    "time": "12:27:42",
+    "timestamp": "2026-01-30T12:27:42.462805",
+    "confidence": 0.42199939489364624
+  },
+  "6": {
+    "student_id": "6",
+    "name": "b sathvik",
+    "class": "7d",
+    "date": "2026-01-30",
+    "time": "12:27:49",
+    "timestamp": "2026-01-30T12:27:49.689128",
+    "confidence": 0.4633350074291229
+  },
+  "8": {
+    "student_id": "8",
+    "name": "shashank p",
+    "class": "7d",
+    "date": "2026-01-30",
+    "time": "12:27:53",
+    "timestamp": "2026-01-30T12:27:53.134669",
+    "confidence": 0.5022933483123779
+  },
+  "5": {
+    "student_id": "5",
+    "name": "alok kumar",
+    "class": "7d",
+    "date": "2026-01-30",
+    "time": "12:28:14",
+    "timestamp": "2026-01-30T12:28:14.899909",
+    "confidence": 0.5000923275947571
+  },
+  "17": {
+    "student_id": "17",
+    "name": "niharika mam",
+    "class": "we",
+    "date": "2026-01-30",
+    "time": "12:30:14",
+    "timestamp": "2026-01-30T12:30:14.944741",
+    "confidence": 0.7278611660003662
+  }
+}

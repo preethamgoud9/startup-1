@@ -1,0 +1,92 @@
+{
+  "1": {
+    "student_id": "1",
+    "name": "preetham",
+    "class": "cse",
+    "date": "2026-01-27",
+    "time": "11:55:30",
+    "timestamp": "2026-01-27T11:55:30.609966",
+    "confidence": 0.6578966975212097
+  },
+  "2": {
+    "student_id": "2",
+    "name": "parth",
+    "class": "6c",
+    "date": "2026-01-27",
+    "time": "12:02:05",
+    "timestamp": "2026-01-27T12:02:05.346815",
+    "confidence": 0.782282292842865
+  },
+  "3": {
+    "student_id": "3",
+    "name": "sriman narayana",
+    "class": "7d",
+    "date": "2026-01-27",
+    "time": "12:04:11",
+    "timestamp": "2026-01-27T12:04:11.789505",
+    "confidence": 0.6157522201538086
+  },
+  "4": {
+    "student_id": "4",
+    "name": "p prateek",
+    "class": "7d",
+    "date": "2026-01-27",
+    "time": "12:05:18",
+    "timestamp": "2026-01-27T12:05:18.185106",
+    "confidence": 0.8766738772392273
+  },
+  "5": {
+    "student_id": "5",
+    "name": "alok kumar",
+    "class": "7d",
+    "date": "2026-01-27",
+    "time": "12:06:58",
+    "timestamp": "2026-01-27T12:06:58.521098",
+    "confidence": 0.8000280857086182
+  },
+  "6": {
+    "student_id": "6",
+    "name": "b sathvik",
+    "class": "7d",
+    "date": "2026-01-27",
+    "time": "12:07:54",
+    "timestamp": "2026-01-27T12:07:54.853000",
+    "confidence": 0.8507938981056213
+  },
+  "7": {
+    "student_id": "7",
+    "name": "v satvik",
+    "class": "7d",
+    "date": "2026-01-27",
+    "time": "12:09:30",
+    "timestamp": "2026-01-27T12:09:30.543294",
+    "confidence": 0.9390993118286133
+  },
+  "8": {
+    "student_id": "8",
+    "name": "shashank p",
+    "class": "7d",
+    "date": "2026-01-27",
+    "time": "12:10:51",
+    "timestamp": "2026-01-27T12:10:51.006910",
+    "confidence": 0.8480179309844971
+  },
+  "9": {
+    "student_id": "9",
+    "name": "akhil r",
+    "class": "7d",
+    "date": "2026-01-27",
+    "time": "12:11:47",
+    "timestamp": "2026-01-27T12:11:47.463488",
+    "confidence": 0.9410207867622375
+  },
+  "10": {
+    "student_id": "10",
+    "name": "aman j",
+    "class": "7d",
+    "date": "2026-01-27",
+    "time": "12:12:45",
+    "timestamp": "2026-01-27T12:12:45.854310",
+    "confidence": 0.9260439276695251
+  }
+}
