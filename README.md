@@ -24,7 +24,7 @@ A production-grade, real-time face recognition attendance system built with Fast
 ### Hardware
 - **Minimum**: 8GB RAM, Quad-core CPU
 - **Recommended**: 16GB RAM, Multi-core CPU
-- **Camera**: USB webcam or RTSP-compatible IP camera
+- **Camera**: USB webcam
 
 ### Software
 - **Python**: 3.11 (required for onnxruntime compatibility)
@@ -136,7 +136,6 @@ face_recognition:
   device: "cpu"                  # Processing device
 
 camera:
-  rtsp_url: ""                   # RTSP camera URL (optional)
   usb_device_id: 0               # USB camera ID (default: 0)
   fps_limit: 2                   # Frame processing rate
   frame_skip: 1                  # Process every Nth frame
@@ -342,7 +341,7 @@ npm run dev
 - Decrease `det_size` to 640x640
 - Increase `frame_skip` to 2 or 3
 - Lower `fps_limit` to 1
-- Use USB camera instead of RTSP
+- Ensure a direct USB connection (avoid hubs when possible)
 
 ### For Edge Devices (Raspberry Pi)
 ```yaml

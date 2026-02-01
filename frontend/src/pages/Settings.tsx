@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Video, Globe, Save, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Video, Save, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 import './Settings.css';
 
 export const Settings: React.FC = () => {
-    const [sourceType, setSourceType] = useState<'usb' | 'rtsp'>('usb');
     const [usbId, setUsbId] = useState(0);
-    const [rtspUrl, setRtspUrl] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -15,9 +13,7 @@ export const Settings: React.FC = () => {
         const fetchSettings = async () => {
             try {
                 const response = await api.get('/settings/camera');
-                setSourceType(response.data.source_type);
                 setUsbId(response.data.usb_device_id);
-                setRtspUrl(response.data.rtsp_url);
             } catch (err) {
                 console.error('Failed to fetch settings', err);
             } finally {
@@ -32,9 +28,7 @@ export const Settings: React.FC = () => {
         setMessage(null);
         try {
             await api.post('/settings/camera', {
-                source_type: sourceType,
                 usb_device_id: usbId,
-                rtsp_url: rtspUrl,
             });
             setMessage({ type: 'success', text: 'Vision configuration synchronized successfully.' });
         } catch (err: any) {
@@ -67,58 +61,19 @@ export const Settings: React.FC = () => {
                     </div>
 
                     <div className="settings-grid" style={{ display: 'grid', gap: '32px' }}>
-                        <div className="form-group">
-                            <label className="form-label">
-                                <Globe size={18} color="var(--primary)" />
-                                Primary Signal Source
-                            </label>
-                            <div className="source-toggle">
-                                <button
-                                    className={`toggle-btn ${sourceType === 'usb' ? 'active' : ''}`}
-                                    onClick={() => setSourceType('usb')}
-                                >
-                                    Local Hardware
-                                </button>
-                                <button
-                                    className={`toggle-btn ${sourceType === 'rtsp' ? 'active' : ''}`}
-                                    onClick={() => setSourceType('rtsp')}
-                                >
-                                    Network Stream
-                                </button>
-                            </div>
-                            <p className="input-hint">Select the primary optical sensor for real-time analysis.</p>
+                        <div className="form-group animate-fade-in">
+                            <label className="form-label">Hardware Interface Index</label>
+                            <select
+                                className="form-input"
+                                value={usbId}
+                                onChange={(e) => setUsbId(parseInt(e.target.value))}
+                            >
+                                <option value={0}>Primary Interface (Index 0)</option>
+                                <option value={1}>Secondary Interface (Index 1)</option>
+                                <option value={2}>Auxiliary Interface (Index 2)</option>
+                            </select>
+                            <p className="input-hint">Standard USB cameras usually mount on index 0.</p>
                         </div>
-
-                        {sourceType === 'usb' ? (
-                            <div className="form-group animate-fade-in">
-                                <label className="form-label">Hardware Interface Index</label>
-                                <select
-                                    className="form-input"
-                                    value={usbId}
-                                    onChange={(e) => setUsbId(parseInt(e.target.value))}
-                                >
-                                    <option value={0}>Primary Interface (Index 0)</option>
-                                    <option value={1}>Secondary Interface (Index 1)</option>
-                                    <option value={2}>Auxiliary Interface (Index 2)</option>
-                                </select>
-                                <p className="input-hint">Standard USB cameras usually mount on index 0.</p>
-                            </div>
-                        ) : (
-                            <div className="form-group animate-fade-in">
-                                <label className="form-label">Network Protocol Address</label>
-                                <div className="input-icon-wrapper">
-                                    <Globe size={18} className="input-icon" />
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        value={rtspUrl}
-                                        onChange={(e) => setRtspUrl(e.target.value)}
-                                        placeholder="rtsp://admin:pass@192.168.1.100:554/stream"
-                                    />
-                                </div>
-                                <p className="input-hint">Protocol: RTSP | Format: rtsp://user:pass@host:port/path</p>
-                            </div>
-                        )}
                     </div>
 
                     {message && (

@@ -5,11 +5,13 @@ import { EnrollStudent } from './pages/EnrollStudent'
 import { AttendanceDashboard } from './pages/AttendanceDashboard'
 import { Login } from './pages/Login'
 import { Settings } from './pages/Settings'
+import { CCTVSetup } from './pages/CCTVSetup'
+import { Production } from './pages/Production'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import './App.css'
 
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState<'live' | 'enroll' | 'attendance' | 'settings'>('live')
+  const [currentPage, setCurrentPage] = useState<'live' | 'enroll' | 'attendance' | 'settings' | 'cctv' | 'production'>('live')
   const { isAuthenticated, isLoading } = useAuth()
 
   if (isLoading) {
@@ -31,6 +33,8 @@ function AppContent() {
       {currentPage === 'enroll' && <EnrollStudent />}
       {currentPage === 'attendance' && <AttendanceDashboard />}
       {currentPage === 'settings' && <Settings />}
+      {currentPage === 'cctv' && <CCTVSetup />}
+      {currentPage === 'production' && <Production />}
     </div>
   )
 }
