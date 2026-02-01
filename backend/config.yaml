@@ -15,7 +15,6 @@ face_recognition:
   device: "cpu"
 
 camera:
-  rtsp_url: ""
   usb_device_id: 0
   fps_limit: 2
   frame_skip: 1

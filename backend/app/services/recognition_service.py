@@ -3,7 +3,7 @@ import logging
 import threading
 import time
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 
 import cv2
 import numpy as np
@@ -23,25 +23,37 @@ class RecognitionService:
         self.frame_lock = threading.Lock()
         self.frame_count = 0
 
-    def start_camera(self, source: Optional[str] = None):
+    def start_camera(self, source: Optional[Union[int, str]] = None):
         if self.running:
             logger.warning("Camera already running")
             return
 
-        if source is None:
-            if settings.camera.rtsp_url:
-                source = settings.camera.rtsp_url
-            else:
-                source = settings.camera.usb_device_id
+        # Determine source based on settings or override
+        if source is not None:
+            resolved_source = source
+        elif settings.camera.source_type == "rtsp" and settings.camera.rtsp_url:
+            resolved_source = settings.camera.rtsp_url
+        else:
+            resolved_source = settings.camera.usb_device_id
 
-        self.cap = cv2.VideoCapture(source)
+        log_source = self._describe_source(resolved_source)
+        logger.info(f"Attempting to connect to: {log_source}")
+
+        # For RTSP, use specific backend and options for better compatibility
+        if isinstance(resolved_source, str) and resolved_source.startswith("rtsp"):
+            self.cap = cv2.VideoCapture(resolved_source, cv2.CAP_FFMPEG)
+            # Set buffer size to reduce latency
+            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        else:
+            self.cap = cv2.VideoCapture(resolved_source)
+
         if not self.cap.isOpened():
-            raise RuntimeError(f"Failed to open camera: {source}")
+            raise RuntimeError(f"Failed to open camera: {log_source}")
 
         self.running = True
         self.camera_thread = threading.Thread(target=self._camera_loop, daemon=True)
         self.camera_thread.start()
-        logger.info(f"Camera started: {source}")
+        logger.info(f"Camera started: {log_source}")
 
     def stop_camera(self):
         if not self.running:
@@ -75,6 +87,15 @@ class RecognitionService:
                 self.latest_frame = frame.copy()
 
             time.sleep(1.0 / settings.camera.fps_limit if settings.camera.fps_limit > 0 else 0.01)
+
+    def _describe_source(self, source: Union[int, str]) -> str:
+        if isinstance(source, str):
+            # Mask credentials in RTSP URL for logging
+            if "@" in source:
+                parts = source.split("@")
+                return f"rtsp://***@{parts[-1]}"
+            return source
+        return f"usb device {source}"
 
     def get_latest_frame(self) -> Optional[np.ndarray]:
         with self.frame_lock:

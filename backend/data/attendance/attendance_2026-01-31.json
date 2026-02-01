@@ -7,5 +7,50 @@
     "time": "11:47:04",
     "timestamp": "2026-01-31T11:47:04.930938",
     "confidence": 0.8854683637619019
+  },
+  "13": {
+    "student_id": "13",
+    "name": "daivik",
+    "class": "cse",
+    "date": "2026-01-31",
+    "time": "13:04:38",
+    "timestamp": "2026-01-31T13:04:38.110185",
+    "confidence": 0.48310384154319763
+  },
+  "2": {
+    "student_id": "2",
+    "name": "parth",
+    "class": "6c",
+    "date": "2026-01-31",
+    "time": "13:22:38",
+    "timestamp": "2026-01-31T13:22:38.719281",
+    "confidence": 0.3966616988182068
+  },
+  "7": {
+    "student_id": "7",
+    "name": "v satvik",
+    "class": "7d",
+    "date": "2026-01-31",
+    "time": "13:25:35",
+    "timestamp": "2026-01-31T13:25:35.396074",
+    "confidence": 0.39531779289245605
+  },
+  "3": {
+    "student_id": "3",
+    "name": "sriman narayana",
+    "class": "7d",
+    "date": "2026-01-31",
+    "time": "16:03:50",
+    "timestamp": "2026-01-31T16:03:50.620096",
+    "confidence": 0.3594352602958679
+  },
+  "8": {
+    "student_id": "8",
+    "name": "shashank p",
+    "class": "7d",
+    "date": "2026-01-31",
+    "time": "16:03:54",
+    "timestamp": "2026-01-31T16:03:54.849749",
+    "confidence": 0.35037297010421753
   }
 }

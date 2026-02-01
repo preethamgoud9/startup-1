@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 class CameraStartRequest(BaseModel):
-    source: str | None = None
+    source: int | str | None = None
 
 
 class CameraStatusResponse(BaseModel):

@@ -26,8 +26,8 @@ class FaceRecognitionConfig(BaseSettings):
 
 class CameraConfig(BaseSettings):
     source_type: str = "usb"  # "usb" or "rtsp"
-    rtsp_url: str = ""
     usb_device_id: int = 0
+    rtsp_url: str = ""
     fps_limit: int = 2
     frame_skip: int = 1
 

@@ -1,35 +1,24 @@
 import logging
-from fastapi import APIRouter, HTTPException, Depends
-from app.core.settings_manager import load_dynamic_settings, save_dynamic_settings, CameraSettingsUpdate
-from app.api.auth import get_current_user
 from typing import Annotated
-from urllib.parse import quote
+
 import cv2
+from fastapi import APIRouter, HTTPException, Depends
+
+from app.api.auth import get_current_user
+from app.core.settings_manager import (
+    CameraSettingsUpdate,
+    load_dynamic_settings,
+    save_dynamic_settings,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
+
 @router.get("/camera")
 async def get_camera_settings(_user: Annotated[dict, Depends(get_current_user)]):
     return load_dynamic_settings()
-
-def _sanitize_rtsp_credentials(rtsp_url: str) -> str:
-    if not rtsp_url or not rtsp_url.lower().startswith("rtsp://"):
-        return rtsp_url
-
-    _prefix, remainder = rtsp_url.split("rtsp://", 1)
-    if "@" not in remainder:
-        return rtsp_url
-
-    creds, rest = remainder.rsplit("@", 1)
-    if ":" not in creds:
-        return rtsp_url
-
-    username, password = creds.split(":", 1)
-    encoded_username = quote(username, safe="")
-    encoded_password = quote(password, safe="")
-    return f"rtsp://{encoded_username}:{encoded_password}@{rest}"
 
 
 @router.post("/camera")
@@ -37,47 +26,70 @@ async def update_camera_settings(
     data: CameraSettingsUpdate,
     _user: Annotated[dict, Depends(get_current_user)]
 ):
-    # Validate source
-    source = data.rtsp_url if data.source_type == "rtsp" else data.usb_device_id
-    if isinstance(source, str):
-        source = _sanitize_rtsp_credentials(source)
-        data.rtsp_url = source
+    source_type = data.source_type
 
-    # Configure OpenCV for RTSP with longer timeout
-    logger.info(f"Attempting to connect to camera source: {source}")
-    logger.info(f"Source type: {data.source_type}")
-    
-    # Try with default backend first (auto-detect)
-    cap = cv2.VideoCapture(source)
-    
-    logger.info(f"VideoCapture created, isOpened: {cap.isOpened()}")
-    
-    # Try to read a frame to confirm connection works
-    if not cap.isOpened():
-        logger.error(f"Failed to open camera source: {source}")
+    if source_type == "rtsp":
+        rtsp_url = data.rtsp_url
+        if not rtsp_url:
+            raise HTTPException(
+                status_code=400,
+                detail="RTSP URL is required when source type is 'rtsp'",
+            )
+
+        # Mask credentials for logging
+        log_url = rtsp_url
+        if "@" in rtsp_url:
+            parts = rtsp_url.split("@")
+            log_url = f"rtsp://***@{parts[-1]}"
+
+        logger.info(f"Validating RTSP stream: {log_url}")
+        cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+        if not cap.isOpened():
+            logger.error(f"Failed to connect to RTSP stream: {log_url}")
+            cap.release()
+            raise HTTPException(
+                status_code=400,
+                detail="Unable to connect to RTSP stream. Check URL and credentials.",
+            )
+
+        ret, frame = cap.read()
         cap.release()
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Unable to connect to camera source: {source}"
-        )
-    
-    # Attempt to grab a frame to verify stream is working
-    logger.info("Camera opened, attempting to read frame...")
-    ret, frame = cap.read()
-    if frame is not None:
-        logger.info(f"Frame read result: ret={ret}, frame shape={frame.shape}")
+
+        if not ret or frame is None:
+            logger.error(f"RTSP stream {log_url} connected but returned no frames")
+            raise HTTPException(
+                status_code=400,
+                detail="RTSP stream connected but did not return frames. Check stream availability.",
+            )
+
+        logger.info(f"RTSP stream {log_url} validated successfully")
+
     else:
-        logger.info(f"Frame read result: ret={ret}, frame is None")
-    cap.release()
-    
-    if not ret:
-        logger.error(f"Connected but unable to read frames from: {source}")
-        raise HTTPException(
-            status_code=400,
-            detail=f"Connected but unable to read frames from: {source}"
-        )
-    
-    logger.info(f"Successfully connected and read frame from: {source}")
-    
+        usb_id = data.usb_device_id
+        logger.info(f"Validating USB camera interface {usb_id}")
+        cap = cv2.VideoCapture(usb_id)
+
+        if not cap.isOpened():
+            logger.error(f"Failed to open USB camera: {usb_id}")
+            cap.release()
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unable to connect to USB camera index {usb_id}",
+            )
+
+        ret, frame = cap.read()
+        cap.release()
+
+        if not ret or frame is None:
+            logger.error(f"USB camera {usb_id} opened but returned no frames")
+            raise HTTPException(
+                status_code=400,
+                detail=f"USB camera {usb_id} opened but did not return frames",
+            )
+
+        logger.info(f"USB camera {usb_id} validated successfully")
+
     save_dynamic_settings(data.model_dump())
     return {"status": "success", "message": "Camera configuration updated"}
