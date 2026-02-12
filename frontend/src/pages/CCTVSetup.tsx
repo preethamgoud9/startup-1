@@ -15,6 +15,7 @@ import {
     RefreshCw,
     CheckCircle,
     XCircle,
+    Monitor,
 } from 'lucide-react';
 import api from '../services/api';
 import './CCTVSetup.css';
@@ -521,6 +522,27 @@ export const CCTVSetup: React.FC = () => {
                 </button>
                 <button
                     className="btn-primary"
+                    onClick={async () => {
+                        if (!connectionResult?.stream_url) return;
+                        try {
+                            const cameraName = `${selectedBrand ? (brands[selectedBrand]?.name || selectedBrand) : 'Camera'} - Ch${channel}`;
+                            await api.post('/production/cameras/from-cctv-setup', {
+                                name: cameraName,
+                                stream_url: connectionResult.stream_url,
+                                fps_limit: 5,
+                                detection_enabled: true,
+                            });
+                            window.location.href = '/production';
+                        } catch (err: any) {
+                            alert(err.response?.data?.detail || 'Failed to add camera to production');
+                        }
+                    }}
+                >
+                    <Monitor size={20} />
+                    <span>Add to Production</span>
+                </button>
+                <button
+                    className="btn-secondary"
                     onClick={() => window.location.href = '/live'}
                 >
                     <Video size={20} />

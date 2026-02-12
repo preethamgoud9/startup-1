@@ -59,6 +59,8 @@ class AttendanceService:
         name: str,
         class_name: str,
         confidence: float,
+        camera_id: Optional[int] = None,
+        camera_name: Optional[str] = None,
     ) -> tuple[bool, str]:
         self._load_today_attendance()
 
@@ -67,7 +69,7 @@ class AttendanceService:
             return False, f"Already marked present at {existing['time']}"
 
         now = datetime.now()
-        self.today_attendance[student_id] = {
+        record = {
             "student_id": student_id,
             "name": name,
             "class": class_name,
@@ -76,6 +78,11 @@ class AttendanceService:
             "timestamp": now.isoformat(),
             "confidence": confidence,
         }
+        if camera_id is not None:
+            record["camera_id"] = camera_id
+            record["camera_name"] = camera_name or f"Camera {camera_id}"
+
+        self.today_attendance[student_id] = record
 
         self._save_attendance()
         logger.info(f"Marked attendance for {student_id} ({name})")

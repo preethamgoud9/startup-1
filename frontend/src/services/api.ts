@@ -205,4 +205,48 @@ export const getCurrentUser = async (): Promise<User> => {
   return response.data;
 };
 
+// Production recognition types
+export interface ProductionRecognitionResult {
+  student_id: string | null;
+  name?: string;
+  class?: string;
+  confidence: number;
+  is_known: boolean;
+  bbox?: number[];
+  camera_id: number;
+  timestamp: string;
+}
+
+export interface AttendanceFeedEntry {
+  student_id: string;
+  name: string;
+  class: string;
+  confidence: number;
+  camera_id: number;
+  camera_name: string;
+  timestamp: string;
+  message: string;
+}
+
+// Production recognition API functions
+export const getCameraRecognitions = async (cameraId: number): Promise<ProductionRecognitionResult[]> => {
+  const response = await api.get(`/production/cameras/${cameraId}/recognitions`);
+  return response.data;
+};
+
+export const getAttendanceFeed = async (): Promise<AttendanceFeedEntry[]> => {
+  const response = await api.get('/production/attendance-feed');
+  return response.data;
+};
+
+export const addCameraFromSetup = async (data: {
+  name: string;
+  stream_url: string;
+  fps_limit?: number;
+  detection_enabled?: boolean;
+}): Promise<any> => {
+  const response = await api.post('/production/cameras/from-cctv-setup', data);
+  return response.data;
+};
+
 export default api;

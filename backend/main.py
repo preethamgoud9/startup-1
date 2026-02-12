@@ -20,9 +20,17 @@ async def lifespan(app: FastAPI):
     face_engine = FaceEngine()
     face_engine.initialize()
     app.state.face_engine = face_engine
+
+    # Wire production manager with face engine and attendance service
+    from app.services.production_manager import production_manager
+    from app.services.attendance_service import attendance_service
+    production_manager.initialize_advanced_processing(face_engine)
+    production_manager.set_attendance_service(attendance_service)
+
     logger.info("System ready")
     yield
     logger.info("Shutting down...")
+    production_manager.stop_all()
     face_engine.cleanup()
     logger.info("Shutdown complete")
 

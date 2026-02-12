@@ -453,13 +453,17 @@ class CCTVHelper:
             detected_protocol = "rtmp"
 
         try:
+            # Force TCP transport for RTSP (more reliable than UDP)
+            import os
+            os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|rtsp_flags;prefer_tcp"
+            
             # Configure capture based on protocol
             if detected_protocol in ["http", "https"]:
                 cap = cv2.VideoCapture(stream_url)
             else:
                 # Use FFmpeg backend for RTSP/RTMP
                 cap = cv2.VideoCapture(stream_url, cv2.CAP_FFMPEG)
-                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                cap.set(cv2.CAP_PROP_BUFFERSIZE, 3)  # Increased buffer
                 
                 # Force TCP transport if requested (more reliable)
                 if use_tcp or protocol == "rtsp_tcp":

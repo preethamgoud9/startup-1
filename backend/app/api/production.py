@@ -5,6 +5,7 @@ Supports up to 32 cameras with GPU acceleration.
 
 import base64
 import logging
+import time
 from typing import Annotated, Optional, List
 
 import cv2
@@ -137,6 +138,77 @@ async def get_camera_detections(
 ):
     """Get latest face detections for a camera."""
     return production_manager.get_camera_detections(camera_id)
+
+
+@router.get("/cameras/{camera_id}/recognitions")
+async def get_camera_recognitions(
+    camera_id: int,
+    _user: Annotated[dict, Depends(get_current_user)],
+):
+    """Get latest face recognition results for a camera (with student IDs)."""
+    return production_manager.get_camera_recognitions(camera_id)
+
+
+@router.get("/attendance-feed")
+async def get_attendance_feed(
+    _user: Annotated[dict, Depends(get_current_user)],
+):
+    """Get recent auto-attendance events across all cameras."""
+    return production_manager.get_recent_attendance_feed()
+
+
+@router.get("/cameras/{camera_id}/annotated-frame")
+async def get_annotated_frame(
+    camera_id: int,
+    _user: Annotated[dict, Depends(get_current_user)],
+):
+    """Get camera frame with recognition bounding boxes drawn."""
+    frame = production_manager.get_frame(camera_id)
+    if frame is None:
+        raise HTTPException(status_code=404, detail="No frame available")
+
+    frame = frame.copy()
+    recognitions = production_manager.get_camera_recognitions(camera_id)
+
+    for result in recognitions:
+        bbox = result.get("bbox")
+        if not bbox:
+            continue
+        x1, y1, x2, y2 = bbox
+        color = (0, 255, 0) if result.get("is_known") else (0, 0, 255)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+        label = result.get("name") or result.get("student_id") or "Unknown"
+        cv2.putText(
+            frame,
+            f"{label} {result['confidence']:.2f}",
+            (x1, max(0, y1 - 10)),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA,
+        )
+
+    _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+    frame_base64 = base64.b64encode(buffer).decode('utf-8')
+    return {
+        "camera_id": camera_id,
+        "frame": f"data:image/jpeg;base64,{frame_base64}",
+        "recognitions": recognitions,
+    }
+
+
+@router.post("/cameras/from-cctv-setup")
+async def add_camera_from_cctv_setup(
+    data: CameraAddRequest,
+    _user: Annotated[dict, Depends(get_current_user)],
+):
+    """Add camera using verified CCTV setup connection result."""
+    result = production_manager.add_camera(data.model_dump())
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+    # Auto-start if system is running
+    if production_manager.running:
+        production_manager.start_camera(result["camera_id"])
+
+    return result
 
 
 @router.post("/start")
@@ -278,6 +350,9 @@ async def get_camera_grid(
             "name": camera["name"],
             "status": camera["status"],
             "fps": camera["fps"],
+            "health": camera.get("health", "red"),
+            "reconnect_attempts": camera.get("reconnect_attempts", 0),
+            "recognitions": production_manager.get_camera_recognitions(camera_id),
             "frame": None,
         }
 
@@ -288,7 +363,7 @@ async def get_camera_grid(
             grid_height = int(height * (grid_width / width))
             resized = cv2.resize(frame, (grid_width, grid_height))
             
-            _, buffer = cv2.imencode('.jpg', resized, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            _, buffer = cv2.imencode('.jpg', resized, [cv2.IMWRITE_JPEG_QUALITY, 60])
             frame_data["frame"] = f"data:image/jpeg;base64,{base64.b64encode(buffer).decode('utf-8')}"
 
         frames.append(frame_data)
@@ -297,4 +372,5 @@ async def get_camera_grid(
         "columns": columns,
         "cameras": frames,
         "total": len(cameras),
+        "timestamp": time.time(),  # For frontend sync
     }

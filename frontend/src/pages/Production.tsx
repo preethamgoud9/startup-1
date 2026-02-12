@@ -16,8 +16,12 @@ import {
     Wifi,
     WifiOff,
     Zap,
+    Users,
+    Clock,
+    Camera,
 } from 'lucide-react';
 import api from '../services/api';
+import type { AttendanceFeedEntry, ProductionRecognitionResult } from '../services/api';
 import './Production.css';
 
 interface Camera {
@@ -35,18 +39,22 @@ interface Camera {
     detection_count: number;
     frame_count: number;
     has_frame: boolean;
+    health: 'green' | 'yellow' | 'red';
+    reconnect_attempts: number;
 }
 
 interface SystemStats {
     running: boolean;
     total_cameras: number;
     connected_cameras: number;
+    reconnecting_cameras: number;
     errored_cameras: number;
     total_fps: number;
     total_frames_processed: number;
     total_detections: number;
     processing_mode: string;
     worker_threads: number;
+    recent_attendance_count: number;
 }
 
 interface GPUInfo {
@@ -83,6 +91,9 @@ interface CameraFrame {
     name: string;
     status: string;
     fps: number;
+    health: string;
+    reconnect_attempts: number;
+    recognitions: ProductionRecognitionResult[];
     frame: string | null;
 }
 
@@ -93,11 +104,12 @@ export const Production: React.FC = () => {
     const [config, setConfig] = useState<ProductionConfig | null>(null);
     const [cameraFrames, setCameraFrames] = useState<CameraFrame[]>([]);
     const [detectionQualities, setDetectionQualities] = useState<DetectionQuality[]>([]);
-    
+    const [attendanceFeed, setAttendanceFeed] = useState<AttendanceFeedEntry[]>([]);
+
     const [isLoading, setIsLoading] = useState(true);
     const [showAddCamera, setShowAddCamera] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
-    
+
     // New camera form
     const [newCamera, setNewCamera] = useState({
         name: '',
@@ -130,8 +142,12 @@ export const Production: React.FC = () => {
     const fetchFrames = useCallback(async () => {
         if (!stats?.running) return;
         try {
-            const response = await api.get('/production/grid?columns=4&max_cameras=32');
-            setCameraFrames(response.data.cameras);
+            const [framesRes, feedRes] = await Promise.all([
+                api.get('/production/grid?columns=4&max_cameras=32'),
+                api.get('/production/attendance-feed'),
+            ]);
+            setCameraFrames(framesRes.data.cameras);
+            setAttendanceFeed(feedRes.data);
         } catch (err) {
             console.error('Failed to fetch frames', err);
         }
@@ -145,7 +161,8 @@ export const Production: React.FC = () => {
 
     useEffect(() => {
         if (stats?.running) {
-            const frameInterval = setInterval(fetchFrames, 500);
+            // Faster polling for smoother streaming (200ms vs 500ms)
+            const frameInterval = setInterval(fetchFrames, 200);
             return () => clearInterval(frameInterval);
         }
     }, [stats?.running, fetchFrames]);
@@ -162,6 +179,8 @@ export const Production: React.FC = () => {
     const handleStopAll = async () => {
         try {
             await api.post('/production/stop');
+            setCameraFrames([]);
+            setAttendanceFeed([]);
             fetchData();
         } catch (err: any) {
             alert(err.response?.data?.detail || 'Failed to stop');
@@ -216,21 +235,22 @@ export const Production: React.FC = () => {
         }
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'connected': return '#22c55e';
-            case 'connecting': return '#f59e0b';
-            case 'error': return '#ef4444';
-            default: return '#6b7280';
-        }
-    };
-
     const getStatusIcon = (status: string) => {
         switch (status) {
             case 'connected': return <Wifi size={14} />;
             case 'connecting': return <Loader2 size={14} className="animate-spin" />;
+            case 'reconnecting': return <RefreshCw size={14} className="animate-spin" />;
             case 'error': return <AlertCircle size={14} />;
             default: return <WifiOff size={14} />;
+        }
+    };
+
+    const getHealthColor = (health: string) => {
+        switch (health) {
+            case 'green': return '#22c55e';
+            case 'yellow': return '#f59e0b';
+            case 'red': return '#ef4444';
+            default: return '#6b7280';
         }
     };
 
@@ -253,7 +273,7 @@ export const Production: React.FC = () => {
                         <Monitor size={32} />
                         Production Control Center
                     </h1>
-                    <p className="production-subtitle">Multi-camera surveillance with GPU acceleration</p>
+                    <p className="production-subtitle">Multi-camera recognition with auto-attendance</p>
                 </div>
                 <div className="header-actions">
                     <button
@@ -295,6 +315,10 @@ export const Production: React.FC = () => {
                     <span className="stat-label">Connected</span>
                 </div>
                 <div className="stat-item">
+                    <span className="stat-value" style={{ color: '#f59e0b' }}>{stats?.reconnecting_cameras || 0}</span>
+                    <span className="stat-label">Reconnecting</span>
+                </div>
+                <div className="stat-item">
                     <span className="stat-value" style={{ color: '#ef4444' }}>{stats?.errored_cameras || 0}</span>
                     <span className="stat-label">Errors</span>
                 </div>
@@ -304,7 +328,7 @@ export const Production: React.FC = () => {
                 </div>
                 <div className="stat-item">
                     <span className="stat-value">{stats?.total_detections || 0}</span>
-                    <span className="stat-label">Detections</span>
+                    <span className="stat-label">Recognitions</span>
                 </div>
                 <div className="stat-item gpu-status">
                     <Cpu size={16} />
@@ -385,6 +409,9 @@ export const Production: React.FC = () => {
                     <div className="camera-grid">
                         {cameras.map((camera) => {
                             const frameData = cameraFrames.find(f => f.camera_id === camera.id);
+                            const recognitions = frameData?.recognitions || [];
+                            const knownFaces = recognitions.filter(r => r.is_known);
+                            const health = camera.health || frameData?.health || 'red';
                             return (
                                 <div key={camera.id} className="camera-card glass">
                                     <div className="camera-preview">
@@ -393,22 +420,49 @@ export const Production: React.FC = () => {
                                         ) : (
                                             <div className="no-preview">
                                                 <Video size={32} />
-                                                <span>{camera.status === 'connected' ? 'Loading...' : 'No Signal'}</span>
+                                                <span>
+                                                    {camera.status === 'connected' ? 'Loading...' :
+                                                        camera.status === 'reconnecting' ? `Reconnecting (${camera.reconnect_attempts})...` :
+                                                            'No Signal'}
+                                                </span>
                                             </div>
                                         )}
                                         <div className="camera-overlay">
-                                            <span className="camera-status" style={{ color: getStatusColor(camera.status) }}>
+                                            <span className="camera-status">
+                                                <span
+                                                    className="health-dot"
+                                                    style={{ background: getHealthColor(health) }}
+                                                />
                                                 {getStatusIcon(camera.status)}
                                                 {camera.status}
                                             </span>
                                             <span className="camera-fps">{camera.fps} FPS</span>
                                         </div>
+                                        {/* Recognition badges overlay */}
+                                        {knownFaces.length > 0 && (
+                                            <div className="recognition-overlay">
+                                                {knownFaces.slice(0, 3).map((r, idx) => (
+                                                    <div key={idx} className="recognition-badge">
+                                                        <Users size={12} />
+                                                        <span>{r.name || r.student_id}</span>
+                                                        <span className="badge-confidence">
+                                                            {(r.confidence * 100).toFixed(0)}%
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                                {knownFaces.length > 3 && (
+                                                    <div className="recognition-badge more">
+                                                        +{knownFaces.length - 3} more
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="camera-info">
                                         <h4>{camera.name}</h4>
                                         <div className="camera-meta">
                                             <span>ID: {camera.id}</span>
-                                            <span>Frames: {camera.frame_count}</span>
+                                            <span>Detections: {camera.detection_count}</span>
                                         </div>
                                     </div>
                                     <div className="camera-actions">
@@ -426,6 +480,49 @@ export const Production: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Live Attendance Feed */}
+            {stats?.running && (
+                <div className="attendance-feed-section glass">
+                    <div className="feed-header">
+                        <h3><Users size={20} /> Live Attendance Feed</h3>
+                        <span className="feed-count">{attendanceFeed.length} recent</span>
+                    </div>
+                    {attendanceFeed.length === 0 ? (
+                        <div className="feed-empty">
+                            <Clock size={24} />
+                            <p>Waiting for face recognitions...</p>
+                        </div>
+                    ) : (
+                        <div className="feed-list">
+                            {attendanceFeed.slice(0, 20).map((entry, idx) => (
+                                <div key={idx} className="feed-item">
+                                    <div className="feed-avatar">
+                                        <Users size={18} />
+                                    </div>
+                                    <div className="feed-info">
+                                        <span className="feed-name">{entry.name}</span>
+                                        <span className="feed-id">{entry.student_id} - {entry.class}</span>
+                                    </div>
+                                    <div className="feed-meta">
+                                        <span className="feed-camera">
+                                            <Camera size={12} />
+                                            {entry.camera_name}
+                                        </span>
+                                        <span className="feed-time">
+                                            <Clock size={12} />
+                                            {new Date(entry.timestamp).toLocaleTimeString()}
+                                        </span>
+                                        <span className="feed-confidence">
+                                            {(entry.confidence * 100).toFixed(0)}%
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Add Camera Modal */}
             {showAddCamera && (

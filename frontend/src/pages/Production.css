@@ -500,6 +500,169 @@
     margin-top: 24px;
 }
 
+/* Health Dot */
+.health-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+/* Recognition Overlay */
+.recognition-overlay {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 60%;
+}
+
+.recognition-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: rgba(34, 197, 94, 0.85);
+    border-radius: 6px;
+    font-size: 11px;
+    color: white;
+    font-weight: 500;
+    backdrop-filter: blur(4px);
+}
+
+.recognition-badge.more {
+    background: rgba(99, 102, 241, 0.85);
+    justify-content: center;
+}
+
+.badge-confidence {
+    opacity: 0.8;
+    font-size: 10px;
+}
+
+/* Attendance Feed */
+.attendance-feed-section {
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.feed-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.feed-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 16px;
+    color: var(--text-main);
+}
+
+.feed-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 4px 10px;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 12px;
+}
+
+.feed-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 32px;
+    color: var(--text-muted);
+}
+
+.feed-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.feed-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: rgba(241, 245, 249, 0.3);
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+    transition: background 0.2s ease;
+}
+
+.feed-item:first-child {
+    background: rgba(34, 197, 94, 0.08);
+    border-color: rgba(34, 197, 94, 0.2);
+}
+
+.feed-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+}
+
+.feed-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.feed-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.feed-id {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.feed-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.feed-camera,
+.feed-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.feed-confidence {
+    font-size: 12px;
+    font-weight: 600;
+    color: #22c55e;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .production-container {
