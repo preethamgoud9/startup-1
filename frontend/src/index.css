@@ -1,17 +1,47 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
+/* Mobile-first CSS Variables */
 :root {
   --primary: #6366f1;
   --primary-hover: #4f46e5;
   --secondary: #ec4899;
   --accent: #06b6d4;
   --bg-gradient: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg: rgba(255, 255, 255, 0.85);
   --glass-border: rgba(255, 255, 255, 0.5);
   --text-main: #1e293b;
   --text-muted: #64748b;
-  --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-  --radius: 16px;
+  --shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.1);
+  --radius: 12px;
+  
+  /* Mobile-first spacing */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 0.75rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  
+  /* Mobile-first font sizes */
+  --font-xs: 0.75rem;
+  --font-sm: 0.875rem;
+  --font-md: 1rem;
+  --font-lg: 1.125rem;
+  --font-xl: 1.25rem;
+  --font-2xl: 1.5rem;
+  --font-3xl: 1.875rem;
+}
+
+/* Desktop override */
+@media (min-width: 768px) {
+  :root {
+    --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --radius: 16px;
+    --spacing-lg: 2rem;
+    --spacing-xl: 3rem;
+    --font-xl: 1.5rem;
+    --font-2xl: 1.875rem;
+    --font-3xl: 2.25rem;
+  }
 }
 
 * {
@@ -28,6 +58,7 @@ body {
   color: var(--text-main);
   font-family: 'Outfit', sans-serif;
   overflow-x: hidden;
+  font-size: 16px;
 }
 
 h1,
@@ -51,28 +82,52 @@ body {
   min-height: 100vh;
 }
 
+/* Mobile-first glass effect */
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
 
+@media (min-width: 768px) {
+  .glass {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+/* Mobile-first button */
 .btn-primary {
   background: linear-gradient(135deg, var(--primary), var(--accent));
   color: white;
   border: none;
-  padding: 12px 24px;
-  border-radius: 12px;
+  padding: 10px 20px;
+  border-radius: 10px;
   font-weight: 500;
+  font-size: var(--font-sm);
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+  white-space: nowrap;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .btn-primary {
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: var(--font-md);
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    width: auto;
+  }
 }
 
 .btn-primary:hover {
@@ -82,6 +137,14 @@ body {
 
 .btn-primary:active {
   transform: translateY(0);
+}
+
+/* Touch-friendly tap targets on mobile */
+@media (max-width: 767px) {
+  button, a, input, select {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 .animate-fade-in {

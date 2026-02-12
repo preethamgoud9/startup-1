@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Camera, CheckCircle, AlertCircle, Loader, User, BookOpen, Fingerprint, X } from 'lucide-react';
+import { Camera, CheckCircle, AlertCircle, Loader, User, BookOpen, Fingerprint, X, Zap } from 'lucide-react';
 import { useWebcam } from '../hooks/useWebcam';
-import { startEnrollment, captureImage } from '../services/api';
+import { startEnrollment, captureImage, quickEnroll } from '../services/api';
 import type { EnrollmentSessionResponse } from '../services/api';
 import './EnrollStudent.css';
 
@@ -10,10 +10,64 @@ export const EnrollStudent: React.FC = () => {
   const [studentId, setStudentId] = useState('');
   const [name, setName] = useState('');
   const [className, setClassName] = useState('');
+  const [enrollmentMode, setEnrollmentMode] = useState<'full' | 'quick'>('full'); // New mode state
   const [session, setSession] = useState<EnrollmentSessionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+
+  const handleQuickEnroll = async () => {
+    if (!studentId || !name || !className) {
+      setError('Required fields are missing. Please provide complete student identity.');
+      return;
+    }
+
+    try {
+      setError(null);
+      setSuccess(null);
+      setIsCapturing(true);
+
+      await startWebcam();
+
+      // Wait longer for camera to initialize properly (increased from 500ms to 1500ms)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Try to capture frame with retries
+      let frame = null;
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      while (!frame && attempts < maxAttempts) {
+        frame = captureFrame();
+        if (!frame) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          attempts++;
+        }
+      }
+
+      if (!frame) {
+        setError('Image acquisition failed. Please ensure camera is accessible and try again.');
+        stopWebcam();
+        setIsCapturing(false);
+        return;
+      }
+
+      const response = await quickEnroll(studentId, name, className, frame);
+
+      setSuccess(response.message);
+      stopWebcam();
+
+      // Reset form
+      setStudentId('');
+      setName('');
+      setClassName('');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Quick enrollment failed.');
+    } finally {
+      setIsCapturing(false);
+      stopWebcam();
+    }
+  };
 
   const handleStartEnrollment = async () => {
     if (!studentId || !name || !className) {
@@ -83,6 +137,64 @@ export const EnrollStudent: React.FC = () => {
       {!session ? (
         <div className="enroll-wrapper">
           <div className="form-glass glass">
+            {/* Mode Toggle */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', gap: '12px', padding: '6px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '12px', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                <button
+                  onClick={() => setEnrollmentMode('full')}
+                  style={{
+                    flex: 1,
+                    padding: '10px 18px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: enrollmentMode === 'full' ? 'white' : 'transparent',
+                    color: enrollmentMode === 'full' ? 'var(--primary)' : 'var(--text-muted)',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: enrollmentMode === 'full' ? '0 4px 12px rgba(0, 0, 0, 0.1)' : 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <Camera size={16} />
+                  Full (15 images)
+                </button>
+                <button
+                  onClick={() => setEnrollmentMode('quick')}
+                  style={{
+                    flex: 1,
+                    padding: '10px 18px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: enrollmentMode === 'quick' ? 'white' : 'transparent',
+                    color: enrollmentMode === 'quick' ? 'var(--primary)' : 'var(--text-muted)',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: enrollmentMode === 'quick' ? '0 4px 12px rgba(0, 0, 0, 0.1)' : 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <Zap size={16} />
+                  Quick (1 image)
+                </button>
+              </div>
+              {enrollmentMode === 'quick' && (
+                <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(236, 72, 153, 0.1)', border: '1px solid rgba(236, 72, 153, 0.2)', borderRadius: '10px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  <AlertCircle size={14} style={{ display: 'inline', marginRight: '6px', color: 'var(--secondary)' }} />
+                  Quick mode uses 1 image. Less accurate than full enrollment.
+                </div>
+              )}
+            </div>
+
             <div className="form-group">
               <label className="form-label">
                 <Fingerprint size={16} /> Student ID
@@ -136,8 +248,28 @@ export const EnrollStudent: React.FC = () => {
               </div>
             )}
 
-            <button className="btn-primary" onClick={handleStartEnrollment} style={{ width: '100%', justifyContent: 'center' }}>
-              Initialize Enrollment
+            <button
+              className="btn-primary"
+              onClick={enrollmentMode === 'quick' ? handleQuickEnroll : handleStartEnrollment}
+              disabled={isCapturing}
+              style={{ width: '100%', justifyContent: 'center' }}
+            >
+              {isCapturing ? (
+                <>
+                  <Loader size={20} className="animate-spin" />
+                  <span>Processing...</span>
+                </>
+              ) : enrollmentMode === 'quick' ? (
+                <>
+                  <Zap size={20} />
+                  <span>Quick Enroll</span>
+                </>
+              ) : (
+                <>
+                  <Camera size={20} />
+                  <span>Initialize Enrollment</span>
+                </>
+              )}
             </button>
           </div>
         </div>

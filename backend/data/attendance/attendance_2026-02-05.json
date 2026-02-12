@@ -1,0 +1,29 @@
+{
+  "1": {
+    "student_id": "1",
+    "name": "ss krishna",
+    "class": "7d",
+    "date": "2026-02-05",
+    "time": "14:39:29",
+    "timestamp": "2026-02-05T14:39:29.008726",
+    "confidence": 0.7611696720123291
+  },
+  "17": {
+    "student_id": "17",
+    "name": "karthikeya",
+    "class": "7d",
+    "date": "2026-02-05",
+    "time": "14:42:38",
+    "timestamp": "2026-02-05T14:42:38.870035",
+    "confidence": 0.7338095307350159
+  },
+  "10": {
+    "student_id": "10",
+    "name": "aman j",
+    "class": "7d",
+    "date": "2026-02-05",
+    "time": "14:42:53",
+    "timestamp": "2026-02-05T14:42:53.469883",
+    "confidence": 0.6280055046081543
+  }
+}

@@ -122,6 +122,22 @@ export const captureImage = async (
   return response.data;
 };
 
+export const quickEnroll = async (
+  studentId: string,
+  name: string,
+  className: string,
+  imageData: string
+): Promise<{ success: boolean; message: string }> => {
+  const response = await api.post('/enroll/quick', {
+    student_id: studentId,
+    name,
+    class: className,
+    image_data: imageData,
+  });
+  return response.data;
+};
+
+
 export const startCamera = async (source?: string): Promise<{ running: boolean; message: string }> => {
   const response = await api.post('/recognition/camera/start', { source });
   return response.data;

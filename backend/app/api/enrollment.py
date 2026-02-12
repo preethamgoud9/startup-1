@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from app.models.schemas import (
     StudentEnrollRequest,
+    QuickEnrollRequest,
     EnrollmentSessionResponse,
     CaptureImageRequest,
     CaptureImageResponse,
@@ -64,6 +65,40 @@ async def capture_image(request: Request, data: CaptureImageRequest):
         raise
     except Exception as e:
         logger.error(f"Failed to capture image: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/quick")
+async def quick_enroll(request: Request, data: QuickEnrollRequest):
+    """
+    Quick enrollment endpoint - enroll a student with just one image.
+    Faster but less accurate than full 15-image enrollment.
+    """
+    face_engine = request.app.state.face_engine
+
+    try:
+        success, message = enrollment_service.quick_enroll(
+            student_id=data.student_id,
+            name=data.name,
+            class_name=data.class_name,
+            image_data=data.image_data,
+            face_engine=face_engine,
+        )
+
+        if not success:
+            raise HTTPException(status_code=400, detail=message)
+
+        return {
+            "success": True,
+            "message": message,
+            "student_id": data.student_id,
+            "name": data.name,
+            "class": data.class_name,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to quick enroll: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

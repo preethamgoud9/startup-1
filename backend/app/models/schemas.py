@@ -16,6 +16,13 @@ class StudentEnrollRequest(BaseModel):
     class_name: str = Field(..., min_length=1, alias="class")
 
 
+class QuickEnrollRequest(BaseModel):
+    student_id: str = Field(..., min_length=1)
+    name: str = Field(..., min_length=1)
+    class_name: str = Field(..., min_length=1, alias="class")
+    image_data: str = Field(..., min_length=1)
+
+
 class EnrollmentSessionResponse(BaseModel):
     session_id: str
     student_id: str

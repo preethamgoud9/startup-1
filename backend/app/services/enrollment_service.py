@@ -107,6 +107,48 @@ class EnrollmentService:
             logger.error(f"Error processing image: {e}")
             return False, f"Error processing image: {str(e)}", session
 
+    def quick_enroll(
+        self,
+        student_id: str,
+        name: str,
+        class_name: str,
+        image_data: str,
+        face_engine,
+    ) -> tuple[bool, str]:
+        """
+        Quick enrollment with a single image.
+        Returns (success: bool, message: str)
+        """
+        try:
+            image = self._decode_base64_image(image_data)
+        except Exception as e:
+            logger.error(f"Failed to decode image: {e}")
+            return False, f"Invalid image data: {str(e)}"
+
+        try:
+            embedding, face = face_engine.get_embedding(image)
+            if embedding is None or face is None:
+                return False, "No face detected in image"
+
+            if face.det_score < settings.enrollment.min_face_quality:
+                return False, f"Face quality too low: {face.det_score:.2f}. Please use better lighting or get closer to camera."
+
+            # Add student with single embedding
+            face_engine.add_student(
+                student_id,
+                name,
+                class_name,
+                [embedding],  # Single embedding in a list
+                metadata={"quick_enrolled": True}
+            )
+            
+            logger.info(f"Quick enrolled student {student_id} ({name})")
+            return True, "Quick enrollment successful! Note: For best accuracy, consider re-enrolling with full 15-image process."
+
+        except Exception as e:
+            logger.error(f"Error during quick enrollment: {e}")
+            return False, f"Error processing enrollment: {str(e)}"
+
     def cancel_session(self, session_id: str) -> bool:
         if session_id in self.active_sessions:
             del self.active_sessions[session_id]

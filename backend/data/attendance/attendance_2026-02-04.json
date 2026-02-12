@@ -1,0 +1,29 @@
+{
+  "3": {
+    "student_id": "3",
+    "name": "sriman narayana",
+    "class": "7d",
+    "date": "2026-02-04",
+    "time": "11:46:51",
+    "timestamp": "2026-02-04T11:46:51.566517",
+    "confidence": 0.4662746787071228
+  },
+  "8": {
+    "student_id": "8",
+    "name": "shashank p",
+    "class": "7d",
+    "date": "2026-02-04",
+    "time": "11:46:54",
+    "timestamp": "2026-02-04T11:46:54.415825",
+    "confidence": 0.7028523087501526
+  },
+  "6": {
+    "student_id": "6",
+    "name": "b sathvik",
+    "class": "7d",
+    "date": "2026-02-04",
+    "time": "11:46:58",
+    "timestamp": "2026-02-04T11:46:58.009999",
+    "confidence": 0.45535731315612793
+  }
+}

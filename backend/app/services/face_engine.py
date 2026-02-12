@@ -113,7 +113,7 @@ class FaceEngine:
         
         return None, best_score
 
-    def add_student(self, student_id: str, name: str, class_name: str, embeddings: list[np.ndarray]):
+    def add_student(self, student_id: str, name: str, class_name: str, embeddings: list[np.ndarray], metadata: Optional[dict] = None):
         if not embeddings:
             raise ValueError("No embeddings provided")
 
@@ -132,10 +132,16 @@ class FaceEngine:
                 self.gallery_embeddings = np.vstack([self.gallery_embeddings, mean_embedding])
                 self.gallery_labels = np.append(self.gallery_labels, student_id)
 
-        self.gallery_metadata[student_id] = {
+        student_metadata = {
             "name": name,
             "class": class_name,
         }
+        
+        # Merge with additional metadata if provided
+        if metadata:
+            student_metadata.update(metadata)
+        
+        self.gallery_metadata[student_id] = student_metadata
 
         self.save_embeddings()
         logger.info(f"Added student {student_id} ({name}) to gallery")

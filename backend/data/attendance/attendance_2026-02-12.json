@@ -1,0 +1,38 @@
+{
+  "13": {
+    "student_id": "13",
+    "name": "daivik",
+    "class": "cse",
+    "date": "2026-02-12",
+    "time": "11:26:06",
+    "timestamp": "2026-02-12T11:26:06.220233",
+    "confidence": 0.6228280067443848
+  },
+  "7": {
+    "student_id": "7",
+    "name": "v satvik",
+    "class": "7d",
+    "date": "2026-02-12",
+    "time": "11:40:55",
+    "timestamp": "2026-02-12T11:40:55.955479",
+    "confidence": 0.37348902225494385
+  },
+  "69": {
+    "student_id": "69",
+    "name": "gowtham",
+    "class": "9th",
+    "date": "2026-02-12",
+    "time": "11:43:38",
+    "timestamp": "2026-02-12T11:43:38.433779",
+    "confidence": 0.6749685406684875
+  },
+  "3": {
+    "student_id": "3",
+    "name": "sriman narayana",
+    "class": "7d",
+    "date": "2026-02-12",
+    "time": "11:43:47",
+    "timestamp": "2026-02-12T11:43:47.610952",
+    "confidence": 0.3914629817008972
+  }
+}
