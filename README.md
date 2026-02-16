@@ -1,6 +1,6 @@
-# Face Recognition Attendance System
+# Surveillance System
 
-Real-time face recognition attendance system built with FastAPI and React. Uses InsightFace (SCRFD + ArcFace) to detect and identify students from live camera feeds, automatically marking attendance.
+Real-time face recognition surveillance and attendance system built with FastAPI and React. Uses InsightFace (SCRFD + ArcFace) to detect and identify individuals from live camera feeds, automatically marking attendance.
 
 ## Prerequisites
 
@@ -17,8 +17,8 @@ Real-time face recognition attendance system built with FastAPI and React. Uses 
 ### macOS / Linux
 
 ```bash
-git clone https://github.com/preethamgoud2912/face-recog.git
-cd face-recog
+git clone https://github.com/preethamgoud2912/surveillance-system.git
+cd surveillance-system
 ./setup.sh    # one-time: installs dependencies + downloads model
 ./start.sh    # starts both servers
 ```
@@ -26,8 +26,8 @@ cd face-recog
 ### Windows
 
 ```powershell
-git clone https://github.com/preethamgoud2912/face-recog.git
-cd face-recog
+git clone https://github.com/preethamgoud2912/surveillance-system.git
+cd surveillance-system
 setup.bat     # one-time: installs dependencies + downloads model
 start.bat     # starts both servers
 ```
@@ -112,7 +112,7 @@ camera:
 ## Project Structure
 
 ```
-face-recog/
+surveillance-system/
 ├── backend/
 │   ├── app/
 │   │   ├── api/            # REST endpoints
