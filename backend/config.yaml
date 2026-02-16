@@ -7,12 +7,17 @@ app:
 
 face_recognition:
   detector: "SCRFD"
-  embedding_model: "ArcFace"
+  embedding_model: "antelopev2"
   embedding_dim: 512
   det_size: [1280, 1280]
-  min_detection_score: 0.35
-  recognition_threshold: 0.35
+  min_detection_score: 0.4
+  recognition_threshold: 0.36
   device: "cpu"
+  # Embedding stabilizer for long-range temporal aggregation
+  stabilizer_enabled: true
+  stabilizer_min_frames: 3
+  stabilizer_alpha: 0.3
+  stabilizer_min_consistency: 0.70
 
 camera:
   usb_device_id: 0

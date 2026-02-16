@@ -1,6 +1,7 @@
 import logging
+from typing import List
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Form
 
 from app.models.schemas import (
     StudentEnrollRequest,
@@ -99,6 +100,53 @@ async def quick_enroll(request: Request, data: QuickEnrollRequest):
         raise
     except Exception as e:
         logger.error(f"Failed to quick enroll: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/upload")
+async def upload_enroll(
+    request: Request,
+    student_id: str = Form(...),
+    name: str = Form(...),
+    class_name: str = Form(..., alias="class_name"),
+    files: List[UploadFile] = File(...),
+):
+    """
+    Enroll a student by uploading photo files (1-15 images).
+    Accepts JPEG/PNG files from camera roll, phone, or any source.
+    """
+    face_engine = request.app.state.face_engine
+
+    if not files:
+        raise HTTPException(status_code=400, detail="No files uploaded")
+    if len(files) > 15:
+        raise HTTPException(status_code=400, detail="Maximum 15 images allowed")
+
+    try:
+        success, message, processed, failed = enrollment_service.upload_enroll(
+            student_id=student_id,
+            name=name,
+            class_name=class_name,
+            files=files,
+            face_engine=face_engine,
+        )
+
+        if not success:
+            raise HTTPException(status_code=400, detail=message)
+
+        return {
+            "success": True,
+            "message": message,
+            "student_id": student_id,
+            "name": name,
+            "class": class_name,
+            "images_processed": processed,
+            "images_failed": failed,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to upload enroll: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

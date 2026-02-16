@@ -23,6 +23,7 @@ from app.services.scalable_processor import (
     ScalableProcessor, ProcessingPriority, ProcessingResult, ScalableConfig,
     MotionDetector,
 )
+from app.services.embedding_stabilizer import EmbeddingStabilizer, StabilizerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +115,7 @@ class ProductionManager:
         # Advanced components (initialized lazily)
         self._optimized_detector: Optional[OptimizedDetector] = None
         self._scalable_processor: Optional[ScalableProcessor] = None
+        self._embedding_stabilizer: Optional[EmbeddingStabilizer] = None
         self._detection_quality = DetectionQuality.BALANCED
 
         # Face engine and attendance
@@ -175,7 +177,7 @@ class ProductionManager:
         }
 
     def initialize_advanced_processing(self, face_engine):
-        """Initialize optimized detector, scalable processor, and face engine."""
+        """Initialize optimized detector, scalable processor, stabilizer, and face engine."""
         try:
             self._face_engine = face_engine
             self._optimized_detector = OptimizedDetector(face_engine)
@@ -183,6 +185,21 @@ class ProductionManager:
 
             self._scalable_processor = ScalableProcessor(face_engine, self._optimized_detector)
             self._scalable_processor.add_result_callback(self._on_detection_result)
+
+            # Embedding stabilizer for temporal aggregation (long-range accuracy)
+            from app.core.config import settings
+            stabilizer_config = StabilizerConfig(
+                enabled=settings.face_recognition.stabilizer_enabled,
+                min_frames_for_recognition=settings.face_recognition.stabilizer_min_frames,
+                alpha_base=settings.face_recognition.stabilizer_alpha,
+                min_consistency_sim=settings.face_recognition.stabilizer_min_consistency,
+            )
+            self._embedding_stabilizer = EmbeddingStabilizer(stabilizer_config)
+            logger.info(
+                f"Embedding stabilizer initialized "
+                f"(enabled={stabilizer_config.enabled}, "
+                f"min_frames={stabilizer_config.min_frames_for_recognition})"
+            )
 
             logger.info("Advanced processing components initialized")
         except Exception as e:
@@ -389,39 +406,107 @@ class ProductionManager:
                 time.sleep(0.01)
 
     def _process_frame_for_recognition(self, camera_id: int, frame: np.ndarray):
-        """Detect faces and recognize them against gallery."""
+        """Detect faces using optimized detector and recognize against gallery."""
         if not self._face_engine:
             return
 
         try:
-            faces = self._face_engine.detect_faces(frame)
             recognition_results = []
 
-            for face in faces:
-                embedding = getattr(face, "normed_embedding", None)
-                if embedding is None:
-                    continue
+            # Use optimized detector if available (tiled detection, quality scoring)
+            if self._optimized_detector:
+                detected_faces = self._optimized_detector.detect(
+                    frame, camera_id=camera_id, get_embeddings=True
+                )
 
-                embedding = np.asarray(embedding, dtype=np.float32)
-                student_id, confidence = self._face_engine.recognize(embedding)
+                # Pass through embedding stabilizer for temporal aggregation
+                if self._embedding_stabilizer:
+                    stabilized = self._embedding_stabilizer.process(
+                        camera_id, detected_faces
+                    )
+                    for entry in stabilized:
+                        face = entry["face"]
+                        embedding = entry["stabilized_embedding"]
 
-                bbox = face.bbox.astype(int).tolist()
+                        if embedding is None:
+                            continue
 
-                result = {
-                    "student_id": student_id,
-                    "confidence": float(confidence),
-                    "is_known": student_id is not None,
-                    "bbox": bbox,
-                    "camera_id": camera_id,
-                    "timestamp": datetime.now().isoformat(),
-                }
+                        student_id, confidence = self._face_engine.recognize(
+                            embedding, quality_score=face.quality_score
+                        )
 
-                if student_id and student_id in self._face_engine.gallery_metadata:
-                    metadata = self._face_engine.gallery_metadata[student_id]
-                    result["name"] = metadata.get("name")
-                    result["class"] = metadata.get("class")
+                        result = {
+                            "student_id": student_id,
+                            "confidence": float(confidence),
+                            "is_known": student_id is not None,
+                            "bbox": list(face.bbox),
+                            "camera_id": camera_id,
+                            "timestamp": datetime.now().isoformat(),
+                            "quality": face.quality_score,
+                            "stabilizer_frames": entry["consistent_frames"],
+                            "track_id": entry["track_id"],
+                        }
 
-                recognition_results.append(result)
+                        if student_id and student_id in self._face_engine.gallery_metadata:
+                            metadata = self._face_engine.gallery_metadata[student_id]
+                            result["name"] = metadata.get("name")
+                            result["class"] = metadata.get("class")
+
+                        recognition_results.append(result)
+                else:
+                    # No stabilizer — direct recognition (original path)
+                    for face in detected_faces:
+                        if face.embedding is None:
+                            continue
+
+                        student_id, confidence = self._face_engine.recognize(
+                            face.embedding, quality_score=face.quality_score
+                        )
+
+                        result = {
+                            "student_id": student_id,
+                            "confidence": float(confidence),
+                            "is_known": student_id is not None,
+                            "bbox": list(face.bbox),
+                            "camera_id": camera_id,
+                            "timestamp": datetime.now().isoformat(),
+                            "quality": face.quality_score,
+                        }
+
+                        if student_id and student_id in self._face_engine.gallery_metadata:
+                            metadata = self._face_engine.gallery_metadata[student_id]
+                            result["name"] = metadata.get("name")
+                            result["class"] = metadata.get("class")
+
+                        recognition_results.append(result)
+            else:
+                # Fallback to basic detection
+                faces = self._face_engine.detect_faces(frame)
+                for face in faces:
+                    embedding = getattr(face, "normed_embedding", None)
+                    if embedding is None:
+                        continue
+
+                    embedding = np.asarray(embedding, dtype=np.float32)
+                    student_id, confidence = self._face_engine.recognize(embedding)
+
+                    bbox = face.bbox.astype(int).tolist()
+
+                    result = {
+                        "student_id": student_id,
+                        "confidence": float(confidence),
+                        "is_known": student_id is not None,
+                        "bbox": bbox,
+                        "camera_id": camera_id,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+
+                    if student_id and student_id in self._face_engine.gallery_metadata:
+                        metadata = self._face_engine.gallery_metadata[student_id]
+                        result["name"] = metadata.get("name")
+                        result["class"] = metadata.get("class")
+
+                    recognition_results.append(result)
 
             # Store results
             with self.lock:
@@ -608,6 +693,8 @@ class ProductionManager:
             if camera_id in self._latest_recognitions:
                 del self._latest_recognitions[camera_id]
             self._motion_detector.clear(camera_id)
+            if self._embedding_stabilizer:
+                self._embedding_stabilizer.clear_camera(camera_id)
 
             logger.info(f"Removed camera {camera_id}")
             return {"success": True, "camera_id": camera_id}
@@ -892,6 +979,11 @@ class ProductionManager:
                 "processing_mode": self.config.processing_mode.value,
                 "worker_threads": self.config.worker_threads,
                 "recent_attendance_count": len(self._recent_attendance_log),
+                "stabilizer_stats": (
+                    self._embedding_stabilizer.get_stats()
+                    if self._embedding_stabilizer
+                    else None
+                ),
             }
 
     # ─── Serialization ────────────────────────────────────────────────

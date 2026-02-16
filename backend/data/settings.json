@@ -1,5 +1,0 @@
-{
-    "source_type": "rtsp",
-    "usb_device_id": 0,
-    "rtsp_url": "rtsp://admin:admin%40123@192.168.1.59:554/cam/realmonitor?channel=1&subtype=0"
-}

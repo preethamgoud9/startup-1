@@ -138,6 +138,25 @@ export const quickEnroll = async (
 };
 
 
+export const uploadEnroll = async (
+  studentId: string,
+  name: string,
+  className: string,
+  files: File[]
+): Promise<{ success: boolean; message: string; images_processed: number; images_failed: number }> => {
+  const formData = new FormData();
+  formData.append('student_id', studentId);
+  formData.append('name', name);
+  formData.append('class_name', className);
+  files.forEach((file) => {
+    formData.append('files', file);
+  });
+  const response = await api.post('/enroll/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
 export const startCamera = async (source?: string): Promise<{ running: boolean; message: string }> => {
   const response = await api.post('/recognition/camera/start', { source });
   return response.data;
@@ -246,6 +265,99 @@ export const addCameraFromSetup = async (data: {
   detection_enabled?: boolean;
 }): Promise<any> => {
   const response = await api.post('/production/cameras/from-cctv-setup', data);
+  return response.data;
+};
+
+// Analytics types
+export interface AnalyticsOverview {
+  total_records: number;
+  unique_students: number;
+  total_days: number;
+  avg_daily_attendance: number;
+  avg_confidence: number;
+  classes: string[];
+  enrolled_count: number;
+  enrolled_classes: Record<string, number>;
+  days: number;
+}
+
+export interface AnalyticsTrends {
+  dates: string[];
+  counts: number[];
+  average: number;
+  trend: string;
+}
+
+export interface ClassBreakdownItem {
+  name: string;
+  total_records: number;
+  unique_students: number;
+  avg_daily: number;
+  days_active: number;
+}
+
+export interface StudentInsight {
+  student_id: string;
+  name: string;
+  class: string;
+  days_present: number;
+  total_days: number;
+  attendance_rate: number;
+  avg_confidence: number;
+  last_seen: string;
+}
+
+export interface StudentsAnalytics {
+  students: StudentInsight[];
+  total_enrolled: number;
+}
+
+export interface HourlyDistribution {
+  distribution: Record<string, number>;
+  peak_hour: number;
+  peak_count: number;
+}
+
+export interface ConfidenceBucket {
+  range: string;
+  count: number;
+}
+
+export interface ConfidenceStats {
+  min: number;
+  max: number;
+  mean: number;
+  median: number;
+  distribution: ConfidenceBucket[];
+}
+
+export const getAnalyticsOverview = async (days: number = 30): Promise<AnalyticsOverview> => {
+  const response = await api.get<AnalyticsOverview>(`/analytics/overview?days=${days}`);
+  return response.data;
+};
+
+export const getAnalyticsTrends = async (days: number = 30): Promise<AnalyticsTrends> => {
+  const response = await api.get<AnalyticsTrends>(`/analytics/trends?days=${days}`);
+  return response.data;
+};
+
+export const getClassBreakdown = async (days: number = 30): Promise<{ classes: ClassBreakdownItem[] }> => {
+  const response = await api.get(`/analytics/class-breakdown?days=${days}`);
+  return response.data;
+};
+
+export const getStudentsAnalytics = async (days: number = 30): Promise<StudentsAnalytics> => {
+  const response = await api.get<StudentsAnalytics>(`/analytics/students?days=${days}`);
+  return response.data;
+};
+
+export const getHourlyDistribution = async (days: number = 30): Promise<HourlyDistribution> => {
+  const response = await api.get<HourlyDistribution>(`/analytics/hourly?days=${days}`);
+  return response.data;
+};
+
+export const getConfidenceStats = async (days: number = 30): Promise<ConfidenceStats> => {
+  const response = await api.get<ConfidenceStats>(`/analytics/confidence?days=${days}`);
   return response.data;
 };
 

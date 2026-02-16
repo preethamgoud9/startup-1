@@ -22,6 +22,11 @@ class FaceRecognitionConfig(BaseSettings):
     min_detection_score: float = 0.6
     recognition_threshold: float = 0.4
     device: str = "cpu"
+    # Embedding stabilizer (temporal aggregation for long-range accuracy)
+    stabilizer_enabled: bool = True
+    stabilizer_min_frames: int = 3
+    stabilizer_alpha: float = 0.3
+    stabilizer_min_consistency: float = 0.70
 
 
 class CameraConfig(BaseSettings):

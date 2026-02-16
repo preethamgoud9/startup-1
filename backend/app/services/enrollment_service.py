@@ -149,6 +149,85 @@ class EnrollmentService:
             logger.error(f"Error during quick enrollment: {e}")
             return False, f"Error processing enrollment: {str(e)}"
 
+    def upload_enroll(
+        self,
+        student_id: str,
+        name: str,
+        class_name: str,
+        files: list,
+        face_engine,
+    ) -> tuple[bool, str, int, int]:
+        """
+        Enroll student from uploaded image files.
+        Returns (success, message, processed_count, failed_count).
+        """
+        embeddings = []
+        failed = 0
+
+        for file in files:
+            try:
+                import asyncio
+                # Read file bytes (UploadFile is async, but we can read sync in thread)
+                contents = file.file.read()
+                if not contents:
+                    failed += 1
+                    continue
+
+                img_array = np.frombuffer(contents, dtype=np.uint8)
+                img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+
+                if img is None:
+                    logger.warning(f"Could not decode file: {file.filename}")
+                    failed += 1
+                    continue
+
+                embedding, face = face_engine.get_embedding(img)
+                if embedding is None or face is None:
+                    logger.warning(f"No face detected in: {file.filename}")
+                    failed += 1
+                    continue
+
+                if face.det_score < settings.enrollment.min_face_quality:
+                    logger.warning(
+                        f"Low quality face in {file.filename}: {face.det_score:.2f}"
+                    )
+                    failed += 1
+                    continue
+
+                embeddings.append(embedding)
+            except Exception as e:
+                logger.error(f"Error processing file {file.filename}: {e}")
+                failed += 1
+
+        if not embeddings:
+            return False, "No valid faces found in uploaded images.", 0, failed
+
+        try:
+            face_engine.add_student(
+                student_id,
+                name,
+                class_name,
+                embeddings,
+                metadata={"upload_enrolled": True, "source_images": len(embeddings)},
+            )
+
+            msg = (
+                f"Upload enrollment successful! "
+                f"{len(embeddings)} images processed"
+            )
+            if failed > 0:
+                msg += f", {failed} failed"
+            msg += "."
+
+            logger.info(
+                f"Upload enrolled student {student_id} ({name}) "
+                f"with {len(embeddings)} images ({failed} failed)"
+            )
+            return True, msg, len(embeddings), failed
+        except Exception as e:
+            logger.error(f"Error during upload enrollment: {e}")
+            return False, f"Enrollment failed: {str(e)}", 0, failed
+
     def cancel_session(self, session_id: str) -> bool:
         if session_id in self.active_sessions:
             del self.active_sessions[session_id]
