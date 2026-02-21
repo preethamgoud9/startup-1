@@ -1,0 +1,578 @@
+.remote-container {
+    padding: 32px;
+    max-width: 860px;
+    margin: 0 auto;
+}
+
+.remote-container .live-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+}
+
+/* Reuse wizard-progress from CCTVSetup */
+.remote-container .wizard-progress {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 32px;
+}
+
+.remote-container .progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    max-width: 120px;
+    position: relative;
+}
+
+.remote-container .progress-step::after {
+    content: '';
+    position: absolute;
+    top: 16px;
+    left: calc(50% + 20px);
+    width: calc(100% - 40px);
+    height: 2px;
+    background: var(--glass-border);
+}
+
+.remote-container .progress-step:last-child::after {
+    display: none;
+}
+
+.remote-container .progress-step.active::after {
+    background: var(--primary-hover);
+}
+
+.remote-container .step-number {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(241, 245, 249, 0.8);
+    border: 2px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-muted);
+    transition: all 0.3s ease;
+    z-index: 1;
+}
+
+.remote-container .progress-step.active .step-number {
+    background: var(--primary-hover);
+    border-color: var(--primary);
+    color: white;
+}
+
+.remote-container .progress-step.current .step-number {
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+}
+
+.remote-container .step-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+
+.remote-container .progress-step.active .step-label {
+    color: var(--text-main);
+}
+
+/* Wizard Content */
+.remote-container .wizard-content {
+    padding: 32px;
+    border-radius: 16px;
+}
+
+.remote-container .wizard-step {
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
+}
+
+.remote-container .step-header {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.remote-container .step-icon {
+    color: var(--primary);
+    margin-bottom: 16px;
+}
+
+.remote-container .step-header h2 {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+}
+
+.remote-container .step-header p {
+    color: var(--text-muted);
+    margin: 0;
+}
+
+/* Status cards */
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.status-card {
+    padding: 18px;
+    border: 2px solid var(--glass-border);
+    border-radius: 12px;
+    text-align: center;
+}
+
+.status-card .label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.status-card .value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-main);
+    word-break: break-all;
+}
+
+/* Peer table */
+.peer-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+    font-size: 14px;
+}
+
+.peer-table th {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 2px solid var(--glass-border);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+}
+
+.peer-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--glass-border);
+    color: var(--text-main);
+}
+
+.peer-table tr:hover td {
+    background: rgba(99, 102, 241, 0.04);
+}
+
+.online-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.online-dot.online {
+    background: #22c55e;
+    box-shadow: 0 0 4px rgba(34, 197, 94, 0.5);
+}
+
+.online-dot.offline {
+    background: #94a3b8;
+}
+
+.subnet-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--primary);
+    margin: 2px 4px 2px 0;
+    font-family: monospace;
+}
+
+/* Subnet routes summary */
+.subnet-summary {
+    padding: 16px;
+    background: rgba(241, 245, 249, 0.8);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary);
+    margin-bottom: 20px;
+}
+
+.subnet-summary h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+}
+
+.subnet-summary .routes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* Install instructions */
+.install-instructions {
+    padding: 20px;
+    background: rgba(241, 245, 249, 0.8);
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.install-instructions h3 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+}
+
+.install-instructions ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.install-instructions li {
+    margin-bottom: 10px;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.install-instructions code {
+    background: rgba(99, 102, 241, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--primary);
+}
+
+/* Connectivity test form */
+.test-form {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.test-form .form-group {
+    margin-bottom: 0;
+}
+
+.test-form .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--text-main);
+}
+
+.test-form .form-input {
+    padding: 10px 14px;
+    border: 2px solid var(--glass-border);
+    border-radius: 8px;
+    background: rgba(241, 245, 249, 0.8);
+    color: var(--text-main);
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+}
+
+.test-form .form-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* Test results */
+.test-results {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.test-result-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.test-result-item.success {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.test-result-item.failure {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.test-result-item .result-icon {
+    flex-shrink: 0;
+}
+
+.test-result-item .result-text {
+    flex: 1;
+}
+
+.test-result-item .result-latency {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* RTSP URL input */
+.rtsp-form {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    align-items: flex-end;
+}
+
+.rtsp-form .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.rtsp-form .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--text-main);
+}
+
+.rtsp-form .form-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid var(--glass-border);
+    border-radius: 8px;
+    background: rgba(241, 245, 249, 0.8);
+    color: var(--text-main);
+    font-size: 14px;
+    font-family: monospace;
+}
+
+.rtsp-form .form-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* Camera list for adding to production */
+.camera-add-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.camera-add-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border: 2px solid var(--glass-border);
+    border-radius: 10px;
+}
+
+.camera-add-item .cam-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.camera-add-item .cam-name {
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.camera-add-item .cam-url {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: monospace;
+}
+
+.camera-add-item .cam-stats {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* Copy command box */
+.copy-command {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(15, 23, 42, 0.05);
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 13px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+}
+
+.copy-command code {
+    flex: 1;
+    white-space: nowrap;
+}
+
+.copy-command button {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-main);
+    transition: all 0.2s ease;
+}
+
+.copy-command button:hover {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+/* Step actions (reuses CCTVSetup pattern) */
+.remote-container .step-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: auto;
+    padding-top: 24px;
+}
+
+.remote-container .step-actions .btn-primary,
+.remote-container .step-actions .btn-secondary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.remote-container .step-actions .btn-primary {
+    background: var(--primary-hover);
+    color: white;
+    border: none;
+    margin-left: auto;
+}
+
+.remote-container .step-actions .btn-primary:hover:not(:disabled) {
+    background: var(--primary);
+}
+
+.remote-container .step-actions .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.remote-container .step-actions .btn-secondary {
+    background: transparent;
+    color: var(--text-main);
+    border: 2px solid var(--glass-border);
+}
+
+.remote-container .step-actions .btn-secondary:hover {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+/* Status toast */
+.remote-container .status-toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.remote-container .status-success {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #22c55e;
+}
+
+.remote-container .status-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+.remote-container .status-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+}
+
+/* Animate */
+.remote-container .animate-fade-in {
+    animation: remote-fade-in 0.3s ease;
+}
+
+@keyframes remote-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .remote-container {
+        padding: 16px;
+    }
+
+    .remote-container .wizard-content {
+        padding: 20px;
+    }
+
+    .status-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .test-form {
+        flex-direction: column;
+    }
+
+    .rtsp-form {
+        flex-direction: column;
+    }
+
+    .peer-table {
+        font-size: 12px;
+    }
+
+    .peer-table th,
+    .peer-table td {
+        padding: 8px 6px;
+    }
+
+    .remote-container .step-actions {
+        flex-direction: column;
+    }
+
+    .remote-container .step-actions .btn-primary {
+        margin-left: 0;
+    }
+}

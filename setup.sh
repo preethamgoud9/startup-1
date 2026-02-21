@@ -67,21 +67,41 @@ pip install -r requirements.txt -q
 # ── Create data directories ───────────────────────────────────────
 mkdir -p data/attendance/exports data/embeddings
 
-# ── Download face recognition model ───────────────────────────────
-MODEL_DIR="$HOME/.insightface/models/buffalo_l"
-if [ ! -d "$HOME/.insightface/models/antelopev2" ] && [ ! -d "$MODEL_DIR" ]; then
-    info "Downloading face recognition model (buffalo_l)..."
-    info "This is a one-time download (~330MB)..."
+# ── Download face recognition model (antelopev2) ─────────────────
+ANTELOPE_DIR="$HOME/.insightface/models/antelopev2"
+RELEASE_URL="https://github.com/preethamgoud2912/production_1/releases/download/v1.0.0/antelopev2.zip"
+TMP_ZIP="/tmp/antelopev2.zip"
+
+if [ -d "$ANTELOPE_DIR" ] && [ "$(ls -1 "$ANTELOPE_DIR"/*.onnx 2>/dev/null | wc -l)" -ge 5 ]; then
+    info "antelopev2 model already installed"
+else
+    info "Downloading antelopev2 face recognition model (~344MB)..."
+    info "This is a one-time download..."
     mkdir -p "$HOME/.insightface/models"
-    $PYTHON -c "
+
+    if command -v curl &>/dev/null; then
+        curl -L --progress-bar -o "$TMP_ZIP" "$RELEASE_URL"
+    elif command -v wget &>/dev/null; then
+        wget --show-progress -O "$TMP_ZIP" "$RELEASE_URL"
+    else
+        error "Neither curl nor wget found. Install one and try again."
+    fi
+
+    info "Extracting model files..."
+    unzip -o "$TMP_ZIP" -d "$HOME/.insightface/models/" > /dev/null
+    rm -f "$TMP_ZIP"
+
+    if [ "$(ls -1 "$ANTELOPE_DIR"/*.onnx 2>/dev/null | wc -l)" -ge 5 ]; then
+        info "antelopev2 model installed successfully!"
+    else
+        warn "antelopev2 download failed. Falling back to buffalo_l..."
+        $PYTHON -c "
 from insightface.app import FaceAnalysis
 app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
 app.prepare(ctx_id=-1, det_size=(640, 640))
-print('Model downloaded successfully')
+print('buffalo_l model downloaded successfully')
 "
-    info "Model downloaded!"
-else
-    info "Face recognition model already present"
+    fi
 fi
 
 deactivate

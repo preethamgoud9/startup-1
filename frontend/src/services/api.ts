@@ -361,4 +361,74 @@ export const getConfidenceStats = async (days: number = 30): Promise<ConfidenceS
   return response.data;
 };
 
+// Remote Access (Tailscale) types
+export interface TailscaleStatus {
+  installed: boolean;
+  running: boolean;
+  version: string | null;
+  tailnet_name: string | null;
+  self_ip: string | null;
+  hostname: string | null;
+  backend_state: string | null;
+  error: string | null;
+}
+
+export interface TailscalePeer {
+  hostname: string;
+  ip: string;
+  os: string | null;
+  online: boolean;
+  is_exit_node: boolean;
+  is_subnet_router: boolean;
+  subnet_routes: string[];
+  tags: string[];
+  tailscale_ips: string[];
+}
+
+export interface NetworkInfo {
+  peers: TailscalePeer[];
+  subnet_routes: string[];
+  online_count: number;
+  total_count: number;
+}
+
+export interface TCPTestResult {
+  success: boolean;
+  host: string;
+  port: number;
+  latency_ms: number | null;
+  error: string | null;
+}
+
+export interface RTSPTestResult {
+  success: boolean;
+  url: string;
+  message: string;
+  frame_width: number | null;
+  frame_height: number | null;
+  fps: number | null;
+  codec: string | null;
+}
+
+// Remote Access API functions
+export const getTailscaleStatus = async (): Promise<TailscaleStatus> => {
+  const response = await api.get<TailscaleStatus>('/remote/status');
+  return response.data;
+};
+
+export const getNetworkInfo = async (): Promise<NetworkInfo> => {
+  const response = await api.get<NetworkInfo>('/remote/network');
+  return response.data;
+};
+
+export const testRemoteConnection = async (host: string, port: number): Promise<TCPTestResult> => {
+  const response = await api.post<TCPTestResult>('/remote/test-connection', { host, port });
+  return response.data;
+};
+
+export const testRemoteRTSP = async (url: string, timeout?: number): Promise<RTSPTestResult> => {
+  const response = await api.post<RTSPTestResult>('/remote/test-rtsp', { url, timeout: timeout || 10 });
+  return response.data;
+};
+
 export default api;

@@ -7,11 +7,12 @@ import { Login } from './pages/Login'
 import { Settings } from './pages/Settings'
 import { CCTVSetup } from './pages/CCTVSetup'
 import { Production } from './pages/Production'
+import { RemoteAccess } from './pages/RemoteAccess'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import './App.css'
 
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState<'live' | 'enroll' | 'attendance' | 'settings' | 'cctv' | 'production'>('live')
+  const [currentPage, setCurrentPage] = useState<'live' | 'enroll' | 'attendance' | 'settings' | 'cctv' | 'production' | 'remote'>('live')
   const { isAuthenticated, isLoading } = useAuth()
 
   if (isLoading) {
@@ -35,6 +36,7 @@ function AppContent() {
       {currentPage === 'settings' && <Settings />}
       {currentPage === 'cctv' && <CCTVSetup />}
       {currentPage === 'production' && <Production />}
+      {currentPage === 'remote' && <RemoteAccess />}
     </div>
   )
 }

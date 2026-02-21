@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
-import { Camera, UserPlus, Users, LogOut, User as UserIcon, Settings as SettingsIcon, Radio, Monitor, Menu, X } from 'lucide-react';
+import { Camera, UserPlus, Users, LogOut, User as UserIcon, Settings as SettingsIcon, Radio, Monitor, Menu, X, Globe } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Navbar.css';
 
 interface NavbarProps {
-  currentPage: 'live' | 'enroll' | 'attendance' | 'settings' | 'cctv' | 'production';
-  onNavigate: (page: 'live' | 'enroll' | 'attendance' | 'settings' | 'cctv' | 'production') => void;
+  currentPage: 'live' | 'enroll' | 'attendance' | 'settings' | 'cctv' | 'production' | 'remote';
+  onNavigate: (page: 'live' | 'enroll' | 'attendance' | 'settings' | 'cctv' | 'production' | 'remote') => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleNavigate = (page: 'live' | 'enroll' | 'attendance' | 'settings' | 'cctv' | 'production') => {
+  const handleNavigate = (page: 'live' | 'enroll' | 'attendance' | 'settings' | 'cctv' | 'production' | 'remote') => {
     onNavigate(page);
     setMobileMenuOpen(false);
   };
@@ -61,6 +61,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
           >
             <Monitor size={18} />
             <span>Production</span>
+          </button>
+          <button
+            className={`nav-item ${currentPage === 'remote' ? 'active' : ''}`}
+            onClick={() => onNavigate('remote')}
+          >
+            <Globe size={18} />
+            <span>Remote</span>
           </button>
           <button
             className={`nav-item ${currentPage === 'settings' ? 'active' : ''}`}
@@ -130,6 +137,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
           >
             <Monitor size={20} />
             <span>Production Mode</span>
+          </button>
+          <button
+            className={`mobile-menu-item ${currentPage === 'remote' ? 'active' : ''}`}
+            onClick={() => handleNavigate('remote')}
+          >
+            <Globe size={20} />
+            <span>Remote Access</span>
           </button>
           <button
             className={`mobile-menu-item ${currentPage === 'settings' ? 'active' : ''}`}

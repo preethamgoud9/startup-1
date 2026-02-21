@@ -1,17 +1,23 @@
 """
-Face Engine - State-of-the-art recognition with ResNet100 backbone (antelopev2).
+Face Engine v2 — High-accuracy, low-latency face recognition.
 
-Upgrades over previous version:
-- Model: antelopev2 (glintr100 ResNet100) vs buffalo_l (w600k_r50 ResNet50)
-  - 2x larger backbone trained on cleaner/larger dataset (GLint360K)
-  - Significantly better on hard cases: low quality, profile views, long-range
-- Two-stage matching: centroid pre-filter → exemplar fusion → margin decision
-- Margin-based rejection: ambiguous matches (close 1st/2nd) are rejected
-- Pre-computed centroids: O(n_students) pre-filter before O(n_embeddings) exemplar search
-- Gallery versioning: detects model mismatch and warns about re-enrollment
+Recognition upgrades:
+- Vectorised centroid pre-filter (single matmul instead of Python loop)
+- Gallery-size adaptive thresholds (scales with log2(n_students))
+- Per-student confusability scoring (tighter margin for look-alikes)
+- Embedding variance weighting (high-spread students get stricter checks)
+- Quality gate: skip expensive matching for garbage detections
+- Batch recognition: process N faces in one call
+
+Latency improvements:
+- Pre-stacked centroid matrix → single np.dot for all centroids
+- Dot-product similarity (L2-normalized embeddings → dot == cosine, no division)
+- Eliminated Python loops in hot path (vectorised numpy throughout)
+- Lazy full-gallery matmul (only computed when candidates pass pre-filter)
 """
 
 import logging
+import math
 from pathlib import Path
 from typing import Optional
 
@@ -23,18 +29,16 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 # --- Model configuration ---
-PRIMARY_MODEL = "antelopev2"  # glintr100 ResNet100 — state-of-the-art
-FALLBACK_MODEL = "buffalo_l"  # w600k_r50 ResNet50 — decent fallback
+PRIMARY_MODEL = "antelopev2"   # glintr100 ResNet100
+FALLBACK_MODEL = "buffalo_l"   # w600k_r50 ResNet50
 
 # --- Recognition thresholds (tuned per model) ---
-# antelopev2/glintr100 is more discriminative so thresholds can be slightly lower
 MODEL_THRESHOLDS = {
     "antelopev2": {"high": 0.36, "medium": 0.42, "low": 0.50},
-    "buffalo_l": {"high": 0.42, "medium": 0.48, "low": 0.55},
+    "buffalo_l":  {"high": 0.42, "medium": 0.48, "low": 0.55},
 }
 
 # Minimum margin between best and second-best student score.
-# Rejects ambiguous matches where two students score similarly.
 MIN_MARGIN = 0.05
 
 # Score fusion weights: centroid vs exemplar
@@ -46,6 +50,20 @@ MAX_EMBEDDINGS_PER_STUDENT = 10
 
 # Augmentation noise (slightly lower for R100 — embeddings are more precise)
 AUGMENT_EMBEDDING_NOISE_STD = 0.008
+
+# Gallery-size adaptive threshold scaling factor.
+# threshold += log2(n_students) * GALLERY_SCALE
+# 10 students → +0.027, 50 → +0.045, 200 → +0.061
+GALLERY_SCALE = 0.008
+
+# Confusability threshold: centroid pairs with similarity above this
+# get a stricter margin multiplier.
+CONFUSABLE_SIM = 0.25
+CONFUSABLE_MARGIN_MULT = 1.5
+
+# Minimum quality score to enter the recognition pipeline.
+# Faces below this are too blurry/small to match reliably.
+MIN_QUALITY_FOR_RECOGNITION = 0.15
 
 
 class FaceEngine:
@@ -60,8 +78,14 @@ class FaceEngine:
         self._student_embedding_counts: dict[str, int] = {}
         self._student_centroids: dict[str, np.ndarray] = {}
         self._unique_student_ids: list[str] = []
-        # Per-student label masks (precomputed for fast lookup)
         self._student_masks: dict[str, np.ndarray] = {}
+        # Vectorised centroid matrix (n_students x dim) for batch matmul
+        self._centroid_matrix: Optional[np.ndarray] = None
+        self._centroid_id_order: list[str] = []
+        # Per-student confusability flags
+        self._confusable_students: set[str] = set()
+        # Per-student embedding variance (scalar spread metric)
+        self._student_spread: dict[str, float] = {}
         self.initialized = False
 
     # ------------------------------------------------------------------
@@ -83,7 +107,6 @@ class FaceEngine:
                 "CPUExecutionProvider",
             ]
 
-        # Try primary model (R100), fall back to R50
         for model_name in [PRIMARY_MODEL, FALLBACK_MODEL]:
             try:
                 logger.info(f"Loading model pack: {model_name}")
@@ -132,12 +155,11 @@ class FaceEngine:
             if "metadata" in data:
                 self.gallery_metadata = data["metadata"].item()
 
-            # Check for model mismatch
             if "model_name" in data:
                 gallery_model = str(data["model_name"])
                 if gallery_model and gallery_model != self.model_name:
                     logger.warning(
-                        f"⚠ Gallery was created with '{gallery_model}' but current model is "
+                        f"Gallery was created with '{gallery_model}' but current model is "
                         f"'{self.model_name}'. Embeddings are INCOMPATIBLE — "
                         f"all students must be re-enrolled for accurate recognition."
                     )
@@ -178,15 +200,26 @@ class FaceEngine:
         self._student_centroids = {}
         self._unique_student_ids = []
         self._student_masks = {}
+        self._centroid_matrix = np.empty((0, dim), dtype=np.float32)
+        self._centroid_id_order = []
+        self._confusable_students = set()
+        self._student_spread = {}
 
     def _rebuild_index(self):
-        """Rebuild per-student counts, centroids, masks, and unique ID list."""
+        """Rebuild per-student counts, centroids, masks, centroid matrix,
+        confusability flags, and embedding spread metrics."""
         self._student_embedding_counts = {}
         self._student_centroids = {}
         self._student_masks = {}
 
         if self.gallery_labels is None or len(self.gallery_labels) == 0:
             self._unique_student_ids = []
+            self._centroid_matrix = np.empty(
+                (0, settings.face_recognition.embedding_dim), dtype=np.float32
+            )
+            self._centroid_id_order = []
+            self._confusable_students = set()
+            self._student_spread = {}
             return
 
         # Count embeddings per student
@@ -198,8 +231,10 @@ class FaceEngine:
 
         self._unique_student_ids = list(self._student_embedding_counts.keys())
 
-        # Pre-compute per-student masks and centroids
+        # Pre-compute per-student masks, centroids, and embedding spread
         str_labels = np.array([str(l) for l in self.gallery_labels])
+        centroid_list = []
+
         for sid in self._unique_student_ids:
             mask = str_labels == sid
             self._student_masks[sid] = mask
@@ -210,6 +245,37 @@ class FaceEngine:
             if norm > 0:
                 centroid = centroid / norm
             self._student_centroids[sid] = centroid
+            centroid_list.append(centroid)
+
+            # Embedding spread: mean pairwise distance from centroid.
+            # High spread → student's appearance varies a lot → less reliable.
+            if len(embs) > 1:
+                dists = 1.0 - embs @ centroid
+                self._student_spread[sid] = float(np.mean(dists))
+            else:
+                self._student_spread[sid] = 0.0
+
+        # Stack centroids into matrix for vectorised pre-filter
+        self._centroid_matrix = np.array(centroid_list, dtype=np.float32)
+        self._centroid_id_order = list(self._unique_student_ids)
+
+        # Identify confusable student pairs (centroid similarity > threshold)
+        self._confusable_students = set()
+        n = len(self._centroid_id_order)
+        if n > 1:
+            # Pairwise dot-product of all centroids (n×n, symmetric)
+            pairwise = self._centroid_matrix @ self._centroid_matrix.T
+            for i in range(n):
+                for j in range(i + 1, n):
+                    if pairwise[i, j] > CONFUSABLE_SIM:
+                        self._confusable_students.add(self._centroid_id_order[i])
+                        self._confusable_students.add(self._centroid_id_order[j])
+
+        if self._confusable_students:
+            logger.info(
+                f"Confusable students detected ({len(self._confusable_students)}): "
+                f"stricter margin will be applied"
+            )
 
     # ------------------------------------------------------------------
     # Detection & embedding extraction
@@ -240,37 +306,238 @@ class FaceEngine:
         return np.asarray(embedding, dtype=np.float32), face
 
     # ------------------------------------------------------------------
-    # Recognition (two-stage: centroid pre-filter → exemplar fusion)
+    # Recognition (vectorised two-stage pipeline)
     # ------------------------------------------------------------------
 
     def recognize(
         self, embedding: np.ndarray, quality_score: float = 1.0
     ) -> tuple[Optional[str], float]:
         """
-        Two-stage face recognition with margin-based scoring.
+        Vectorised two-stage face recognition.
 
         Pipeline:
-        1. Centroid pre-filter — fast dot-product against per-student centroids
-           to narrow candidates (O(n_students) instead of O(n_embeddings)).
-        2. Exemplar matching — top-K similarity against individual gallery entries
-           for each candidate student.
-        3. Score fusion — weighted combination of centroid and exemplar scores.
-        4. Margin check — reject if best and second-best are too close (ambiguous).
-
-        Args:
-            embedding: L2-normalized face embedding from the recognition model.
-            quality_score: Face quality score (0-1) from detector.
-
-        Returns:
-            (student_id, confidence) or (None, best_similarity).
+        1. Quality gate — reject if quality too low for reliable matching.
+        2. Centroid pre-filter — single matmul against centroid matrix.
+        3. Exemplar matching — top-K dot-product on candidate embeddings.
+        4. Score fusion — weighted centroid + exemplar.
+        5. Gallery-size adaptive threshold.
+        6. Margin check — stricter for confusable/high-spread students.
+        7. Z-score validation.
         """
         if self.gallery_embeddings is None or len(self.gallery_embeddings) == 0:
             return None, 0.0
-
         if len(self._unique_student_ids) == 0:
             return None, 0.0
 
+        # --- Quality gate ---
+        if quality_score < MIN_QUALITY_FOR_RECOGNITION:
+            return None, 0.0
+
         # --- Threshold selection ---
+        threshold = self._get_threshold(quality_score)
+
+        # --- Stage 1: Vectorised centroid pre-filter ---
+        # Single matmul: (n_students, dim) @ (dim,) → (n_students,)
+        centroid_scores = self._centroid_matrix @ embedding
+
+        prefilter_threshold = threshold - 0.12
+        candidate_mask = centroid_scores >= prefilter_threshold
+
+        if not np.any(candidate_mask):
+            return None, float(np.max(centroid_scores))
+
+        candidate_indices = np.where(candidate_mask)[0]
+        candidate_ids = [self._centroid_id_order[i] for i in candidate_indices]
+        candidate_centroid_scores = centroid_scores[candidate_indices]
+
+        # --- Stage 2: Exemplar matching (lazy full-gallery matmul) ---
+        # Only compute if we have candidates
+        all_sims = self.gallery_embeddings @ embedding  # (n_embeddings,)
+
+        n_candidates = len(candidate_ids)
+        fused_scores = np.empty(n_candidates, dtype=np.float64)
+
+        for idx in range(n_candidates):
+            sid = candidate_ids[idx]
+            mask = self._student_masks[sid]
+            student_sims = all_sims[mask]
+
+            # Top-K exemplar score (mean of top 3)
+            k = min(3, len(student_sims))
+            top_k = np.partition(student_sims, -k)[-k:]
+            exemplar_score = float(np.mean(top_k))
+
+            fused_scores[idx] = (
+                CENTROID_WEIGHT * candidate_centroid_scores[idx]
+                + EXEMPLAR_WEIGHT * exemplar_score
+            )
+
+        # --- Stage 3: Ranking ---
+        rank_order = np.argsort(fused_scores)[::-1]
+        best_idx = rank_order[0]
+        best_sid = candidate_ids[best_idx]
+        best_score = float(fused_scores[best_idx])
+
+        # --- Stage 4: Adaptive threshold check ---
+        if best_score < threshold:
+            return None, best_score
+
+        # --- Stage 5: Margin check ---
+        if len(rank_order) > 1:
+            second_score = float(fused_scores[rank_order[1]])
+            margin = best_score - second_score
+
+            required_margin = MIN_MARGIN
+            # Stricter margin for confusable students
+            if best_sid in self._confusable_students:
+                required_margin *= CONFUSABLE_MARGIN_MULT
+            # Stricter margin for low quality
+            if quality_score < 0.4:
+                required_margin *= 1.5
+            # Stricter margin for high-spread students
+            spread = self._student_spread.get(best_sid, 0.0)
+            if spread > 0.15:
+                required_margin *= 1.3
+
+            if margin < required_margin:
+                logger.debug(
+                    f"Ambiguous match rejected: {best_sid}={best_score:.3f} vs "
+                    f"{candidate_ids[rank_order[1]]}={second_score:.3f} "
+                    f"(margin={margin:.3f} < {required_margin:.3f})"
+                )
+                return None, best_score
+
+        # --- Stage 6: Z-score validation ---
+        if n_candidates >= 3:
+            mu = float(np.mean(fused_scores))
+            sigma = float(np.std(fused_scores))
+            z_score = (best_score - mu) / (sigma + 0.01)
+
+            min_z = 2.0 if quality_score < 0.5 else 1.5
+            if z_score < min_z:
+                logger.debug(
+                    f"Z-score rejection: {best_sid} z={z_score:.2f} < {min_z}"
+                )
+                return None, best_score
+
+        return best_sid, best_score
+
+    def recognize_batch(
+        self,
+        embeddings: np.ndarray,
+        quality_scores: Optional[np.ndarray] = None,
+    ) -> list[tuple[Optional[str], float]]:
+        """
+        Batch recognition for multiple faces in a single frame.
+
+        Args:
+            embeddings: (N, dim) array of L2-normalised embeddings.
+            quality_scores: (N,) array of quality scores. Defaults to 1.0.
+
+        Returns:
+            List of (student_id, confidence) tuples, one per embedding.
+        """
+        n = len(embeddings)
+        if n == 0:
+            return []
+
+        if quality_scores is None:
+            quality_scores = np.ones(n, dtype=np.float32)
+
+        # Fast path: if gallery is empty, return all unknowns
+        if self.gallery_embeddings is None or len(self.gallery_embeddings) == 0:
+            return [(None, 0.0)] * n
+
+        # For small batches (1-2 faces), just loop — overhead of batching not worth it
+        if n <= 2:
+            return [
+                self.recognize(embeddings[i], float(quality_scores[i]))
+                for i in range(n)
+            ]
+
+        # --- Batch centroid pre-filter ---
+        # (N, dim) @ (dim, n_students) → (N, n_students)
+        all_centroid_scores = embeddings @ self._centroid_matrix.T
+
+        # --- Batch full-gallery similarities ---
+        # (N, dim) @ (dim, n_gallery) → (N, n_gallery)
+        all_gallery_sims = embeddings @ self.gallery_embeddings.T
+
+        results = []
+        for i in range(n):
+            q = float(quality_scores[i])
+
+            if q < MIN_QUALITY_FOR_RECOGNITION:
+                results.append((None, 0.0))
+                continue
+
+            threshold = self._get_threshold(q)
+            centroid_scores = all_centroid_scores[i]
+
+            prefilter_threshold = threshold - 0.12
+            candidate_mask = centroid_scores >= prefilter_threshold
+
+            if not np.any(candidate_mask):
+                results.append((None, float(np.max(centroid_scores))))
+                continue
+
+            candidate_indices = np.where(candidate_mask)[0]
+            gallery_sims = all_gallery_sims[i]
+
+            # Score each candidate
+            best_sid = None
+            best_score = 0.0
+            fused_list = []
+
+            for ci in candidate_indices:
+                sid = self._centroid_id_order[ci]
+                mask = self._student_masks[sid]
+                student_sims = gallery_sims[mask]
+                k = min(3, len(student_sims))
+                top_k = np.partition(student_sims, -k)[-k:]
+                exemplar = float(np.mean(top_k))
+                fused = CENTROID_WEIGHT * centroid_scores[ci] + EXEMPLAR_WEIGHT * exemplar
+                fused_list.append((sid, fused))
+
+            fused_list.sort(key=lambda x: x[1], reverse=True)
+            best_sid, best_score = fused_list[0]
+
+            if best_score < threshold:
+                results.append((None, best_score))
+                continue
+
+            # Margin check
+            if len(fused_list) > 1:
+                margin = best_score - fused_list[1][1]
+                required_margin = MIN_MARGIN
+                if best_sid in self._confusable_students:
+                    required_margin *= CONFUSABLE_MARGIN_MULT
+                if q < 0.4:
+                    required_margin *= 1.5
+                spread = self._student_spread.get(best_sid, 0.0)
+                if spread > 0.15:
+                    required_margin *= 1.3
+                if margin < required_margin:
+                    results.append((None, best_score))
+                    continue
+
+            # Z-score check
+            if len(fused_list) >= 3:
+                scores_arr = np.array([s for _, s in fused_list])
+                mu = float(np.mean(scores_arr))
+                sigma = float(np.std(scores_arr))
+                z = (best_score - mu) / (sigma + 0.01)
+                min_z = 2.0 if q < 0.5 else 1.5
+                if z < min_z:
+                    results.append((None, best_score))
+                    continue
+
+            results.append((best_sid, best_score))
+
+        return results
+
+    def _get_threshold(self, quality_score: float) -> float:
+        """Compute adaptive recognition threshold based on quality and gallery size."""
         thresholds = MODEL_THRESHOLDS.get(
             self.model_name, MODEL_THRESHOLDS[FALLBACK_MODEL]
         )
@@ -281,94 +548,15 @@ class FaceEngine:
         else:
             threshold = thresholds["low"]
 
-        # Config override (use the stricter of the two)
+        # Config override
         threshold = max(threshold, settings.face_recognition.recognition_threshold)
 
-        # --- Stage 1: Centroid pre-filter ---
-        centroid_scores: dict[str, float] = {}
-        for sid, centroid in self._student_centroids.items():
-            centroid_scores[sid] = float(np.dot(centroid, embedding))
+        # Gallery-size scaling: more students → slightly stricter threshold
+        n = len(self._unique_student_ids)
+        if n > 1:
+            threshold += math.log2(n) * GALLERY_SCALE
 
-        # Relaxed threshold for pre-filter (don't miss potential matches)
-        prefilter_threshold = threshold - 0.12
-        candidates = [
-            sid
-            for sid, score in centroid_scores.items()
-            if score >= prefilter_threshold
-        ]
-
-        if not candidates:
-            best_centroid = max(centroid_scores.values()) if centroid_scores else 0.0
-            return None, best_centroid
-
-        # --- Stage 2: Exemplar matching on candidates ---
-        all_similarities = np.dot(self.gallery_embeddings, embedding)
-
-        student_fused_scores: dict[str, float] = {}
-        for sid in candidates:
-            mask = self._student_masks[sid]
-            student_sims = all_similarities[mask]
-
-            # Top-K exemplar score (mean of top 3)
-            k = min(3, len(student_sims))
-            top_k_sims = np.partition(student_sims, -k)[-k:]
-            exemplar_score = float(np.mean(top_k_sims))
-
-            # Fuse centroid and exemplar scores
-            fused = (
-                CENTROID_WEIGHT * centroid_scores[sid]
-                + EXEMPLAR_WEIGHT * exemplar_score
-            )
-            student_fused_scores[sid] = fused
-
-        # --- Stage 3: Margin-based decision ---
-        sorted_students = sorted(
-            student_fused_scores.items(), key=lambda x: x[1], reverse=True
-        )
-        best_sid, best_score = sorted_students[0]
-
-        # Check absolute threshold
-        if best_score < threshold:
-            return None, best_score
-
-        # Check margin (does the best match clearly stand out?)
-        if len(sorted_students) > 1:
-            second_score = sorted_students[1][1]
-            margin = best_score - second_score
-
-            # Adaptive margin: stricter for low quality faces
-            required_margin = MIN_MARGIN
-            if quality_score < 0.4:
-                required_margin = MIN_MARGIN * 1.5
-
-            if margin < required_margin:
-                logger.debug(
-                    f"Ambiguous match rejected: {best_sid}={best_score:.3f} vs "
-                    f"{sorted_students[1][0]}={second_score:.3f} "
-                    f"(margin={margin:.3f} < {required_margin:.3f})"
-                )
-                return None, best_score
-
-        # --- Stage 4: Z-score validation (gallery-adaptive) ---
-        # Checks that the best match is a statistical outlier relative to all
-        # candidate scores. Catches false positives where absolute threshold
-        # passes but the match isn't distinctive for this gallery composition.
-        if len(sorted_students) >= 3:
-            all_scores = np.array([s for _, s in sorted_students])
-            mu = float(np.mean(all_scores))
-            sigma = float(np.std(all_scores))
-            z_score = (best_score - mu) / (sigma + 0.01)
-
-            min_z = 2.0 if quality_score < 0.5 else 1.5
-
-            if z_score < min_z:
-                logger.debug(
-                    f"Z-score rejection: {best_sid} z={z_score:.2f} < {min_z} "
-                    f"(score={best_score:.3f}, mu={mu:.3f}, sigma={sigma:.3f})"
-                )
-                return None, best_score
-
-        return best_sid, best_score
+        return threshold
 
     # ------------------------------------------------------------------
     # Enrollment
@@ -382,12 +570,7 @@ class FaceEngine:
         embeddings: list[np.ndarray],
         metadata: Optional[dict] = None,
     ):
-        """
-        Add student with multi-embedding gallery + augmentation.
-
-        Stores diverse original embeddings plus augmented variants to capture
-        natural variation in pose, lighting, and expression.
-        """
+        """Add student with multi-embedding gallery + augmentation."""
         if not embeddings:
             raise ValueError("No embeddings provided")
 
@@ -442,10 +625,9 @@ class FaceEngine:
             student_metadata.update(metadata)
         self.gallery_metadata[student_id] = student_metadata
 
-        # Rebuild index structures (counts, centroids, masks)
         self._rebuild_index()
-
         self.save_embeddings()
+
         logger.info(
             f"Added student {student_id} ({name}) with "
             f"{len(all_embeddings)} embeddings ({len(selected)} original + "
@@ -455,41 +637,34 @@ class FaceEngine:
     def _select_diverse_embeddings(
         self, embeddings: list[np.ndarray], max_count: int
     ) -> list[np.ndarray]:
-        """
-        Greedy farthest-point sampling to select the most diverse embeddings.
-        Maximizes coverage of the student's appearance variation.
-        """
+        """Greedy farthest-point sampling for diverse embedding selection."""
         if len(embeddings) <= max_count:
             return embeddings
 
-        selected = [embeddings[0]]
-        remaining = list(range(1, len(embeddings)))
+        # Vectorised: stack all embeddings
+        emb_matrix = np.stack(embeddings, axis=0)  # (N, dim)
+        n = len(embeddings)
+        selected_indices = [0]
+        min_dists = 1.0 - emb_matrix @ emb_matrix[0]  # (N,) distances from first
 
-        while len(selected) < max_count and remaining:
-            best_idx = -1
-            best_min_dist = -1.0
+        while len(selected_indices) < max_count:
+            # Pick the point with largest minimum distance to selected set
+            best_idx = int(np.argmax(min_dists))
+            if min_dists[best_idx] <= 0:
+                break
+            selected_indices.append(best_idx)
+            # Update min distances
+            new_dists = 1.0 - emb_matrix @ emb_matrix[best_idx]
+            min_dists = np.minimum(min_dists, new_dists)
+            # Mark already selected as -inf so they aren't picked again
+            min_dists[best_idx] = -1.0
 
-            for i in remaining:
-                min_dist = min(
-                    1.0 - float(np.dot(embeddings[i], sel)) for sel in selected
-                )
-                if min_dist > best_min_dist:
-                    best_min_dist = min_dist
-                    best_idx = i
-
-            if best_idx >= 0:
-                selected.append(embeddings[best_idx])
-                remaining.remove(best_idx)
-
-        return selected
+        return [embeddings[i] for i in selected_indices]
 
     def _augment_embeddings(
         self, embeddings: list[np.ndarray]
     ) -> list[np.ndarray]:
-        """
-        Generate augmented embeddings by adding small noise in embedding space.
-        Fills gaps in the embedding space to handle unseen pose/lighting variations.
-        """
+        """Generate augmented embeddings with small noise in embedding space."""
         augmented = []
         for emb in embeddings:
             noise = (
@@ -522,6 +697,7 @@ class FaceEngine:
             "total_students": len(self._student_embedding_counts),
             "embeddings_per_student": dict(self._student_embedding_counts),
             "model": self.model_name,
+            "confusable_students": len(self._confusable_students),
         }
 
     def _largest_face(self, faces):

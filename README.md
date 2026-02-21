@@ -80,11 +80,11 @@ The frontend runs at **http://localhost:5173**.
 2. **Live Recognition** - Start the camera feed; the system detects and identifies enrolled students in real-time
 3. **Attendance** - Recognized students are automatically marked present (once per day)
 
-## Face Recognition Models
+## Face Recognition Model
 
-On first run, the setup script downloads **buffalo_l** (~330MB), a ResNet50-based model that works well for most use cases.
+The setup script automatically downloads **antelopev2** (ResNet100, ~344MB) — the highest accuracy model available. This is a one-time download during setup.
 
-For higher accuracy (especially at distance or with profile views), you can use **antelopev2** (ResNet100). This model must be obtained separately and placed in `~/.insightface/models/antelopev2/`. The system will automatically prefer it when available.
+If the download fails (e.g. network issues), the system falls back to **buffalo_l** (ResNet50) which still provides good accuracy.
 
 ## Configuration
 
@@ -133,8 +133,9 @@ production_1/
 │   │   └── hooks/          # custom React hooks
 │   ├── .env.example        # environment template
 │   └── package.json
-├── setup.sh / setup.bat    # one-time setup
-├── start.sh / start.bat    # start both servers
+├── setup.sh / setup.bat              # one-time setup
+├── start.sh / start.bat              # start both servers
+├── upgrade_model.sh / upgrade_model.bat  # optional: install antelopev2
 └── README.md
 ```
 

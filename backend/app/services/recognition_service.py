@@ -108,24 +108,43 @@ class RecognitionService:
 
         try:
             faces = face_engine.detect_faces(frame)
-            results = []
+            if not faces:
+                with self.frame_lock:
+                    self.latest_results = []
+                return []
 
+            # Collect embeddings and quality scores for batch recognition
+            valid_faces = []
+            embeddings_list = []
+            quality_list = []
             for face in faces:
                 embedding = getattr(face, "normed_embedding", None)
                 if embedding is None:
                     continue
+                valid_faces.append(face)
+                embeddings_list.append(np.asarray(embedding, dtype=np.float32))
+                quality_list.append(float(getattr(face, "det_score", 1.0)))
 
-                embedding = np.asarray(embedding, dtype=np.float32)
-                student_id, confidence = face_engine.recognize(embedding)
+            if not embeddings_list:
+                with self.frame_lock:
+                    self.latest_results = []
+                return []
 
+            # Batch recognition — single matmul for all faces
+            embeddings_batch = np.stack(embeddings_list, axis=0)
+            quality_batch = np.array(quality_list, dtype=np.float32)
+            matches = face_engine.recognize_batch(embeddings_batch, quality_batch)
+
+            results = []
+            now = datetime.now().isoformat()
+            for face, (student_id, confidence) in zip(valid_faces, matches):
                 bbox = face.bbox.astype(int).tolist()
-                
                 result = {
                     "student_id": student_id,
                     "confidence": float(confidence),
                     "is_known": student_id is not None,
                     "bbox": bbox,
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": now,
                 }
 
                 if student_id and student_id in face_engine.gallery_metadata:

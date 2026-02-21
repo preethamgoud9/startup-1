@@ -5,7 +5,7 @@ from datetime import datetime
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health, enrollment, recognition, attendance, auth, settings as settings_api, cctv, production, analytics
+from app.api import health, enrollment, recognition, attendance, auth, settings as settings_api, cctv, production, analytics, remote
 from app.core.config import settings
 from app.services.face_engine import FaceEngine
 from app.utils.logger import setup_logging
@@ -95,6 +95,12 @@ app.include_router(
     analytics.router,
     prefix="/api/analytics",
     tags=["analytics"],
+    dependencies=[Depends(get_current_user)]
+)
+app.include_router(
+    remote.router,
+    prefix="/api",
+    tags=["remote"],
     dependencies=[Depends(get_current_user)]
 )
 
