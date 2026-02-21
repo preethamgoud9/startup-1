@@ -76,35 +76,12 @@ if not exist "data\embeddings" mkdir data\embeddings
 
 REM ── Download face recognition model (antelopev2) ──
 set ANTELOPE_DIR=%USERPROFILE%\.insightface\models\antelopev2
-set RELEASE_URL=https://github.com/preethamgoud9/startup-1/releases/download/v1.0.0/antelopev2.zip
-set TMP_ZIP=%TEMP%\antelopev2.zip
 
 if exist "%ANTELOPE_DIR%\glintr100.onnx" (
     echo [INFO] antelopev2 model already installed
 ) else (
-    echo [INFO] Downloading antelopev2 face recognition model (~344MB)...
-    echo [INFO] This is a one-time download...
-    if not exist "%USERPROFILE%\.insightface\models" mkdir "%USERPROFILE%\.insightface\models"
-
-    curl -L --progress-bar -o "%TMP_ZIP%" "%RELEASE_URL%"
-    if !errorlevel! neq 0 (
-        echo [WARN] antelopev2 download failed. Falling back to buffalo_l...
-        %PYTHON% -c "from insightface.app import FaceAnalysis; app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider']); app.prepare(ctx_id=-1, det_size=(640, 640)); print('buffalo_l downloaded')"
-        goto :model_done
-    )
-
-    echo [INFO] Extracting model files...
-    powershell -command "Expand-Archive -Force '%TMP_ZIP%' '%USERPROFILE%\.insightface\models\'"
-    del "%TMP_ZIP%"
-
-    if exist "%ANTELOPE_DIR%\glintr100.onnx" (
-        echo [INFO] antelopev2 model installed successfully!
-    ) else (
-        echo [WARN] Extraction failed. Falling back to buffalo_l...
-        %PYTHON% -c "from insightface.app import FaceAnalysis; app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider']); app.prepare(ctx_id=-1, det_size=(640, 640)); print('buffalo_l downloaded')"
-    )
+    %PYTHON% "%ROOT_DIR%download_model.py"
 )
-:model_done
 
 call deactivate
 cd /d "%ROOT_DIR%"
