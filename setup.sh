@@ -69,7 +69,7 @@ mkdir -p data/attendance/exports data/embeddings
 
 # ── Download face recognition model (antelopev2) ─────────────────
 ANTELOPE_DIR="$HOME/.insightface/models/antelopev2"
-RELEASE_URL="https://github.com/preethamgoud2912/production_1/releases/download/v1.0.0/antelopev2.zip"
+RELEASE_URL="https://github.com/preethamgoud9/startup-1/releases/download/v1.0.0/antelopev2.zip"
 TMP_ZIP="/tmp/antelopev2.zip"
 
 if [ -d "$ANTELOPE_DIR" ] && [ "$(ls -1 "$ANTELOPE_DIR"/*.onnx 2>/dev/null | wc -l)" -ge 5 ]; then

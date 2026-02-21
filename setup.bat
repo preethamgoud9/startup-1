@@ -76,7 +76,7 @@ if not exist "data\embeddings" mkdir data\embeddings
 
 REM ── Download face recognition model (antelopev2) ──
 set ANTELOPE_DIR=%USERPROFILE%\.insightface\models\antelopev2
-set RELEASE_URL=https://github.com/preethamgoud2912/production_1/releases/download/v1.0.0/antelopev2.zip
+set RELEASE_URL=https://github.com/preethamgoud9/startup-1/releases/download/v1.0.0/antelopev2.zip
 set TMP_ZIP=%TEMP%\antelopev2.zip
 
 if exist "%ANTELOPE_DIR%\glintr100.onnx" (

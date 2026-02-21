@@ -17,8 +17,8 @@ Real-time face recognition surveillance and attendance system built with FastAPI
 ### macOS / Linux
 
 ```bash
-git clone https://github.com/preethamgoud2912/production_1.git
-cd production_1
+git clone https://github.com/preethamgoud9/startup-1.git
+cd startup-1
 ./setup.sh    # one-time: installs dependencies + downloads model
 ./start.sh    # starts both servers
 ```
@@ -26,8 +26,8 @@ cd production_1
 ### Windows
 
 ```powershell
-git clone https://github.com/preethamgoud2912/production_1.git
-cd production_1
+git clone https://github.com/preethamgoud9/startup-1.git
+cd startup-1
 setup.bat     # one-time: installs dependencies + downloads model
 start.bat     # starts both servers
 ```
@@ -112,7 +112,7 @@ camera:
 ## Project Structure
 
 ```
-production_1/
+startup-1/
 ├── backend/
 │   ├── app/
 │   │   ├── api/            # REST endpoints
